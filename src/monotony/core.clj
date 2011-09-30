@@ -1,5 +1,4 @@
-(ns ^{:doc "A composable take on generating times in the
-future."
+(ns ^{:doc "A composable take on generating times."
       :author "Alex Redington"} monotony.core
     (:import java.util.Date java.util.Calendar))
 
@@ -20,7 +19,7 @@ future."
 (defn blank-cal
   "Returns a calendar instance initialized to the UNIX epoch."
   []
-  (let [blank-cal (Calendar/getInstance) ]
+  (let [blank-cal (Calendar/getInstance)]
     (.setTimeInMillis blank-cal 0)
     blank-cal))
 
@@ -105,7 +104,9 @@ future."
                         (let [blank-cal (blank-cal)]
                           (.add blank-cal (kw cycles) 1)
                           (.getTimeInMillis blank-cal)))]
-      (map #(get cycles %) (filter #(< (after-epoch %) (after-epoch keyword)) (keys cycles))))))
+      (map #(get cycles %)
+           (filter #(< (after-epoch %)
+                       (after-epoch keyword)) (keys cycles))))))
 
 (defn calendar
   "Returns a calendar instance initialized to time"
@@ -202,7 +203,9 @@ future."
                           [first-bounded
                            (milli-before last-bounded)] cycle)
         end-fragment [last-bounded end]]
-    (cons start-fragment (reverse (conj (reverse cycles-in-period) end-fragment)))))
+    (concat '(start-fragment)
+            (cycles-in-period)
+            '(end-fragment))))
 
 (defn periods
   "Return an lazy infinite sequence of periods with a duration equal to cycle.
