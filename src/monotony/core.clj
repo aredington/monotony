@@ -68,6 +68,29 @@ future."
    :month Calendar/MONTH
    :year Calendar/YEAR})
 
+(def named-periods
+  ^{:doc "Periods with specific names, e.g. Monday, Tuesday, Friday, January, March"}
+  {:sunday [Calendar/SUNDAY Calendar/DAY_OF_WEEK]
+   :monday [Calendar/MONDAY Calendar/DAY_OF_WEEK]
+   :tuesday [Calendar/TUESDAY Calendar/DAY_OF_WEEK]
+   :wednesday [Calendar/WEDNESDAY Calendar/DAY_OF_WEEK]
+   :thursday [Calendar/THURSDAY Calendar/DAY_OF_WEEK]
+   :friday [Calendar/FRIDAY Calendar/DAY_OF_WEEK]
+   :saturday [Calendar/SATURDAY Calendar/DAY_OF_WEEK]
+   :january [Calendar/JANUARY Calendar/MONTH]
+   :february [Calendar/FEBRUARY Calendar/MONTH]
+   :march [Calendar/MARCH Calendar/MONTH]
+   :april [Calendar/APRIL Calendar/MONTH]
+   :may [Calendar/MAY Calendar/MONTH]
+   :june [Calendar/JUNE Calendar/MONTH]
+   :july [Calendar/JULY Calendar/MONTH]
+   :august [Calendar/AUGUST Calendar/MONTH]
+   :september [Calendar/SEPTEMBER Calendar/MONTH]
+   :october [Calendar/OCTOBER Calendar/MONTH]
+   :november [Calendar/NOVEMBER Calendar/MONTH]
+   :december [Calendar/DECEMBER Calendar/MONTH]
+   })
+
 (def cycle-keywords
   ^{:doc "Special case Calendar mappings of inferior cycles."}
   {:week (list Calendar/MILLISECOND Calendar/SECOND Calendar/MINUTE Calendar/HOUR_OF_DAY Calendar/DAY_OF_WEEK)})
@@ -91,6 +114,15 @@ future."
     (do
       (.setTimeInMillis cal (millis time))
       cal)))
+
+(defn period-named?
+  "Returns true if the period is the named period, false otherwise."
+  [period name]
+  (let [named-period (named-periods name)
+        start-cal (calendar (period 0))
+        end-cal (calendar (period 1))]
+    (and (= (.get start-cal (named-period 1)) (named-period 0))
+         (= (.get end-cal (named-period 1)) (named-period 0)))))
 
 (defn later
   "Return a time cycle later than seed."
