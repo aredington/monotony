@@ -11,7 +11,7 @@ The core concepts of monotony are periods and cycles. A period is
 a stretch of time with a start and an end. We can represent
 the year of 2011 as:
 
-[#<Date Sat Jan 01 00:00:00 EST 2011> #<Date Sat Dec 31 23:59:59 EST 2011>]
+    [#<Date Sat Jan 01 00:00:00 EST 2011> #<Date Sat Dec 31 23:59:59 EST 2011>]
 
 A cycle is a description of a period as an abstract concept, e.g. an hour,
 a day, a week. The cycles monotony comprehends are contained in the cycles
