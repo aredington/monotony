@@ -185,14 +185,15 @@
              (cycles-in [(later 1 cycle start) end] cycle))))))
 
 (defn bounded-cycles-in
-  "Break a period down by a cycle into multiple sub-periods, such
-  that the boundaries between periods cleanly map onto calendar breaks,
+  "Break a period down by a cycle into multiple sub-periods, such that
+  the boundaries between periods cleanly map onto calendar breaks,
   e.g. if month is bound to a period of one month
 
   (bounded-cycles-in month :week)
 
-  Will return a seq of the first partial week of the month, all of the weeks
-  starting with Sunday and ending with Saturday, and the last partial week of the month"
+  Will return a seq of the first partial week of the month, all of the
+  weeks starting with Sunday and ending with Saturday, and the last
+  partial week of the month"
   [period cycle]
   (let [start (period 0)
         end (period 1)
@@ -203,9 +204,9 @@
                           [first-bounded
                            (milli-before last-bounded)] cycle)
         end-fragment [last-bounded end]]
-    (concat '(start-fragment)
-            (cycles-in-period)
-            '(end-fragment))))
+    (concat (list start-fragment)
+            cycles-in-period
+            (list end-fragment))))
 
 (defn periods
   "Return an lazy infinite sequence of periods with a duration equal to cycle.
@@ -217,3 +218,24 @@
      (lazy-seq
       (cons (period-after (prior-boundary seed cycle) cycle)
             (periods cycle (later 1 cycle seed))))))
+
+(defn combine
+  "Given one or more seqs of periods, return a lazy seq which
+  interleaves all of them such that:
+
+  the start of seq n is greater than the start of seq n-1
+  the duration of seq n is less than the duration of seq n-1"
+
+  [& seqs]
+  (when-not (every? empty? seqs)
+    (let [filled-seqs (filter (comp not empty?) seqs)
+          seq-sort-criteria (fn [seq]
+                              [(millis ((first seq) 0))
+                               (- (- (millis ((first seq) 1)) (millis ((first seq) 0))))])
+          seqs-order-by-head (sort-by seq-sort-criteria filled-seqs)
+          first-period (ffirst seqs-order-by-head)
+          rest-of-consumed (rest (first seqs-order-by-head))
+          unconsumed (rest seqs-order-by-head)]
+      (lazy-seq
+       (cons first-period
+             (apply combine (conj unconsumed rest-of-consumed)))))))
