@@ -1,3 +1,3 @@
-(defproject monotony "0.0.1-SNAPSHOT"
-  :description "TODO: add summary of your project"
-  :dependencies [[clojure "1.2.0"]])
+(defproject monotony "0.0.1"
+  :description "Time utilities for humans."
+  :dependencies [[clojure "1.3.0"]])

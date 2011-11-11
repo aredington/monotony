@@ -7,7 +7,7 @@
   []
   (Date.))
 
-(def *seed* ^{:doc "The function called to return the seed
+(def ^:dynamic *seed* ^{:doc "The function called to return the seed
   date. Defaults to fetching the system time."}
   now)
 
@@ -23,7 +23,7 @@
     (.setTimeInMillis blank-cal 0)
     blank-cal))
 
-(def *calendar* ^{:doc "The function called to return a new calendar
+(def ^:dynamic *calendar* ^{:doc "The function called to return a new calendar
   instance. Defaults to using new-cal"}
   new-cal)
 
