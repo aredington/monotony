@@ -4,8 +4,6 @@
   (:require [monotony.core :as m]
             [clojure.set :as s :only (difference)]))
 
-;(def conf (monotony.core/new-config))
-
 (defn- core-fn-sym-vars
   "Retrieve the names and vars of all fns defined in core"
   []
