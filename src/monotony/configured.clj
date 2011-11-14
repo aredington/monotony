@@ -32,13 +32,10 @@
 
 (import-core-fns)
 
- ;;(binding [monotony.configured/periods (partial monotony.core/periods conf)]
- ;;  (monotony.configured/periods :month))
-
- (defmacro with-config
-   [config & body]
-   `(with-bindings
-      ~(into {} (for [var-name (keys (configured-fn-sym-vars))]
-                  [`(var ~(symbol "monotony.configured" (str var-name)))
-                   `(partial ~(symbol "monotony.core" (str var-name)) ~config)]))
-      ~@body))
+(defmacro with-config
+  [config & body]
+  `(with-bindings
+     ~(into {} (for [var-name (keys (configured-fn-sym-vars))]
+                 [`(var ~(symbol "monotony.configured" (str var-name)))
+                  `(partial ~(symbol "monotony.core" (str var-name)) ~config)]))
+     ~@body))
