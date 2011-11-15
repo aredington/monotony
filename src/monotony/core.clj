@@ -3,8 +3,7 @@
   monotony.core
   (:require [monotony.time :as t]
             [monotony.constants :as c])
-  (:import java.util.Date
-           java.util.Calendar
+  (:import java.util.Calendar
            java.util.TimeZone
            java.util.Locale))
 
@@ -17,11 +16,6 @@
   ([] {:calendar new-cal
        :seed (constantly 0)})
   ([spec] (merge (new-config) spec)))
-
-(defn now
-  "Returns the current time"
-  []
-  (Date.))
 
 (defn ^{:configured true} blank-cal
   "Returns a calendar instance initialized to the UNIX epoch."
@@ -92,7 +86,7 @@
 
   will return 12:00:00AM on Jan 1st of the next year."
   [config seed cycle]
-  (prior-boundary config (later 1 cycle seed) cycle))
+  (prior-boundary config (later config 1 cycle seed) cycle))
 
 (defn milli-before
   "Returns the date 1 millisecond before time."

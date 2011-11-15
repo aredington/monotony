@@ -2,38 +2,28 @@
       :author "Alex Redington"}
   monotony.configured
   (:require [monotony.core :as m]
-            [clojure.set :as s :only (difference)]))
+            [monotony.util :as u]))
 
-(defn- core-fn-sym-vars
-  "Retrieve the names and vars of all fns defined in core"
+(defmacro import-core-fns
+  "Expose the core fns from monotony.core in the monotony.configured namespace.
+  All fns that need configuration will be masked with obnoxious exception throwing
+  behavior."
   []
-  (filter (comp fn? deref second) (ns-publics 'monotony.core)))
-
-(defn- configured-fn-sym-vars
-  "Retrieve the names and vars of all fns that need configuring in core"
-  []
-  (filter (comp :configured meta second) (core-fn-sym-vars)))
-
-(defn- unconfigured-fn-sym-vars
-  "Retrieve the names and vars of all the fns that don't need a config
-  object in core"
-  []
-  (s/difference (set (core-fn-sym-vars)) (set (configured-fn-sym-vars))))
-
-(defmacro import-core-fns []
   (let [fail-without-config (fn [& args]
                               (throw (IllegalStateException. "Must be called from within a with-config block.")))]
-    `(do ~@(for [needs-config (keys (configured-fn-sym-vars))]
+    `(do ~@(for [needs-config (keys (u/configured-fn-sym-vars))]
              `(def ~(with-meta needs-config {:dynamic true}) ~fail-without-config))
-         ~@(for [import-fine (unconfigured-fn-sym-vars)]
+         ~@(for [import-fine (u/unconfigured-fn-sym-vars)]
              `(def ~(first import-fine) ~(deref (second import-fine)))))))
 
 (import-core-fns)
 
 (defmacro with-config
+  "Given config, evaluate body with all monotony.configured functions
+  receiving config as their first argument"
   [config & body]
   `(with-bindings
-     ~(into {} (for [var-name (keys (configured-fn-sym-vars))]
+     ~(into {} (for [var-name (keys (u/configured-fn-sym-vars))]
                  [`(var ~(symbol "monotony.configured" (str var-name)))
                   `(partial ~(symbol "monotony.core" (str var-name)) ~config)]))
      ~@body))
