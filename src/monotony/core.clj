@@ -17,14 +17,14 @@
        :seed (constantly 0)})
   ([spec] (merge (new-config) spec)))
 
-(defn ^{:configured true} blank-cal
+(defn blank-cal
   "Returns a calendar instance initialized to the UNIX epoch."
   [config]
   (let [^Calendar blank-cal ((:calendar config))]
     (.setTimeInMillis blank-cal 0)
     blank-cal))
 
-(defn ^{:configured true} calendar
+(defn calendar
   "Returns a calendar instance initialized to time"
   [config time]
   (let [^Calendar cal ((:calendar config))]
@@ -32,7 +32,7 @@
       (.setTimeInMillis cal (t/millis time))
       cal)))
 
-(defn ^{:configured true} period-named?
+(defn period-named?
   "Returns true if the period is the named period, false otherwise."
   [config period name]
   (let [named-period (c/named-periods name)
@@ -41,7 +41,7 @@
     (and (= (.get start-cal (named-period 1)) (named-period 0))
          (= (.get end-cal (named-period 1)) (named-period 0)))))
 
-(defn ^{:configured true} later
+(defn later
   "Return a time cycle later than seed."
   ([config amount cycle]
      (later config amount cycle ((:seed config))))
@@ -50,7 +50,7 @@
        (do (.add cal (cycle c/cycles) amount)
            (.getTime cal)))))
 
-(defn ^{:configured true} contained-cycle-keywords
+(defn contained-cycle-keywords
   "Return a list of all the cycle keywords contained by keyword.
   :year contains :month, :week, :day, :hour, :minute, and :second"
   [config keyword]
@@ -64,7 +64,7 @@
            (filter #(< (after-epoch %)
                        (after-epoch keyword)) (keys c/cycles))))))
 
-(defn ^{:configured true} prior-boundary
+(defn prior-boundary
   "Returns the start of a bounded cycle including time seed.
 
   (prior-boundary (now) :year)
@@ -78,7 +78,7 @@
             (.getActualMinimum cal contained-cycle-val)))
     (.getTime cal)))
 
-(defn ^{:configured true} next-boundary
+(defn next-boundary
   "Returns the next clean boundary of a cycle after
   time seed.
 
@@ -93,7 +93,7 @@
   [time]
   (t/date (- (t/millis time) 1)))
 
-(defn ^{:configured true} period-after
+(defn period-after
   "Returns a period of size equal to cycle, starting
   at seed."
   [config seed cycle]
@@ -101,7 +101,7 @@
    seed
    (milli-before (later config 1 cycle seed))))
 
-(defn ^{:configured true} cycles-in
+(defn cycles-in
   "Break a period down by a cycle into multiple sub-periods wholly
   contained in that period. The first sub-period will be inclusive of
   the start of the period. The last sub-period will be exclusive of
@@ -114,7 +114,7 @@
        (cons (period-after config start cycle)
              (cycles-in config [(later 1 cycle start) end] cycle))))))
 
-(defn ^{:configured true} bounded-cycles-in
+(defn bounded-cycles-in
   "Break a period down by a cycle into multiple sub-periods, such that
   the boundaries between periods cleanly map onto calendar breaks,
   e.g. if month is bound to a period of one month
@@ -138,7 +138,7 @@
             cycles-in-period
             (list end-fragment))))
 
-(defn ^{:configured true} periods
+(defn periods
   "Return an lazy infinite sequence of periods with a duration equal to cycle.
   If seed is provided, the first period will include it. Otherwise, period
   will include the result of calling *seed*"
