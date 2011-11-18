@@ -18,4 +18,3 @@
   object in core"
   []
   (s/difference (set (core-fn-sym-vars)) (set (configured-fn-sym-vars))))
-

@@ -36,26 +36,33 @@
              `(def ~(with-meta needs-thing {:dynamic true}) ~fail-without-thing))
          ~@(for [imports-fine (unthinged-fn-sym-vars (find-ns api-ns) thing-sym)]
              `(def ~(first imports-fine) ~(deref (second imports-fine)))))))
-         ;; (defmacro
-         ;;    ~(symbol (str "with-" thing-sym))
-         ;;    ~(str "Evaluate body with all "
-         ;;            *ns* " functions receiving "
-         ;;            thing-sym " as their first argument")
-         ;;    ~(vector thing-sym (symbol "&") (symbol "body"))
-         ;;    `(with-bindings
-         ;;       ~(into {} (for [~(symbol 'var-name) (keys (thinged-fn-sym-vars ~(find-ns api-ns) (quote ~thing-sym)))]
-         ;;                   [`(var ~(symbol ~*ns* (str ~(symbol 'var-name))))
-         ;;                    `(partial ~(symbol ~(find-ns api-ns) (str ~(symbol 'var-name))) (quote ~~thing-sym))]))
-         ;;       ~@body)))))
 
 (import-api-fns monotony.core config)
 
-(defmacro with-config
-  "Evaluate body with all monotony.configured functions
-  receiving config as their first argument"
-  [config & body]
-  `(with-bindings
-     ~(into {} (for [var-name (keys (thinged-fn-sym-vars 'monotony.core 'config))]
-                 [`(var ~(symbol "monotony.configured" (str var-name)))
-                  `(partial ~(symbol "monotony.core" (str var-name)) ~config)]))
-     ~@body))
+(defn- thingy-bindings
+  "Create a bindings map for all fns from source-ns in target-ns that accept thing-sym as
+  their first arg"
+  [source-ns target-ns thing-sym]
+  (into {} (for [var-name (keys (thinged-fn-sym-vars source-ns thing-sym))]
+             [(ns-resolve target-ns var-name) `(list 'partial
+                                                    ~(ns-resolve source-ns var-name)
+                                                    ~thing-sym)])))
+
+(defmacro make-the-with-thingy
+  "Create a with-thing-sym macro for executing all of the matching
+  functions from api-ns with the first argument passed from the with-thing-sym block. e.g.:
+
+  (make-the-with-thingy monotony.core config)
+
+  will make a with-config macro against the monotony.core namespace."
+  [api-ns thing-sym]
+  (let [thingy-bindings (thingy-bindings (find-ns api-ns) *ns* thing-sym)]
+    `(defmacro  ~(symbol (str "with-" thing-sym))
+       ~(str "Evaluate body with all "
+             *ns* " functions receiving "
+             thing-sym " as their first argument")
+       ~(vector thing-sym (symbol "&") (symbol "body"))
+       `(with-bindings ~~thingy-bindings
+          ~@~(symbol "body")))))
+
+(make-the-with-thingy monotony.core config)
