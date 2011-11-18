@@ -32,9 +32,9 @@
                                                  :seed *seed*
                                                  :calendar *calendar*
                                                  nil)))]
-    `(do ~@(for [needs-config (keys (u/configured-fn-sym-vars))]
+    `(do ~@(for [needs-config (keys (u/thinged-fn-sym-vars 'monotony.core 'config))]
              `(def ~needs-config (partial ~(symbol "monotony.core" (str needs-config)) ~earmuff-config)))
-         ~@(for [import-fine (u/unconfigured-fn-sym-vars)]
+         ~@(for [import-fine (u/unthinged-fn-sym-vars 'monotony.core 'config)]
              `(def ~(first import-fine) ~(deref (second import-fine)))))))
 
 (earmuff-core-fns)

@@ -1,7 +1,7 @@
 (ns monotony.test.earmuffed
-  (:use monotony.earmuffed
-        clojure.test)
-  (:require [monotony.time :as t]
+  (:use clojure.test)
+  (:require [monotony.earmuffed :as e]
+            [monotony.time :as t]
             [monotony.core :as c])
   (:import java.util.Calendar
            java.util.TimeZone
@@ -22,8 +22,8 @@
 
 (testing "next-boundary"
   (is (= start-of-second-week-in-2011-est
-         (next-boundary start-of-2011-est :week))))
+         (e/next-boundary start-of-2011-est :week))))
 
 (testing "prior-boundary"
   (is (= start-of-2011-est
-         (prior-boundary a-milli-in-2011 :year))))
+         (e/prior-boundary a-milli-in-2011 :year))))
