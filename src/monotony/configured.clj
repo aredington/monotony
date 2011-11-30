@@ -4,76 +4,75 @@
   (:require [monotony.core :as m]
             [clojure.set :as s]))
 
-(defn api-fn-sym-vars
-  "Return the names and vars of all fns defined in api-ns"
-  [api-ns]
-  (filter (comp fn? deref second) (ns-publics api-ns)))
+(defn fn-sym-vars
+  "Return the names and vars of all fns defined in ns"
+  [ns]
+  (filter (comp fn? deref second) (ns-publics ns)))
 
-(defn thinged-fn-sym-vars
-  "Return the names and vars of all fns that accept thing-sym as their
-  first arg in api-ns"
-  [api-ns thing-sym]
+(defn fn-sym-vars-with-arg
+  "Return the names and vars of all fns that accept arg-sym as their
+  first arg in ns"
+  [ns arg-sym]
   (filter
-   ;; Thise absurdly convoluted predicate will dig through api-ns, and
-   ;; find every fn where every arity receives thing-sym as its first
+   ;; Thise absurdly convoluted predicate will dig through ns, and
+   ;; find every fn where every arity receives arg-sym as its first
    ;; arg.
-   (comp (partial every? #(= thing-sym (first %))) :arglists meta second)
-   (api-fn-sym-vars api-ns)))
+   (comp (partial every? #(= arg-sym (first %))) :arglists meta second)
+   (fn-sym-vars ns)))
 
-(defn unthinged-fn-sym-vars
+(defn fn-sym-vars-without-arg
   "Return the names and vars of all the fns that don't accept
-  thing-sym as their first arg in api-ns"
-  [api-ns thing-sym]
-  (s/difference (set (api-fn-sym-vars api-ns)) (set (thinged-fn-sym-vars api-ns thing-sym))))
+  arg-sym as their first arg in ns"
+  [ns arg-sym]
+  (s/difference (set (fn-sym-vars ns)) (set (fn-sym-vars-with-arg ns arg-sym))))
 
-(defn thingy-bindings
-  "Create a bindings map for all fns that accept thing-sym as their
+(defn override-bindings
+  "Create a bindings map for all fns that accept arg-sym as their
   first arg from source-ns, binding partial versions of them them in
-  target-ns with thing as their first arg"
-  [source-ns target-ns thing-sym thing]
-  (into {} (for [var-name (keys (thinged-fn-sym-vars source-ns thing-sym))]
+  target-ns with arg as their first arg"
+  [source-ns target-ns arg-sym arg]
+  (into {} (for [var-name (keys (fn-sym-vars-with-arg source-ns arg-sym))]
              [(ns-resolve target-ns var-name) `(partial
                                                ~(ns-resolve source-ns var-name)
-                                               ~thing)])))
+                                               ~arg)])))
 
-(defmacro make-the-with-thingy
-  "Create a with-thing-sym macro for executing all of the matching
-  functions from api-ns with the first argument passed from the
-  with-thing-sym block. e.g.:
+(defmacro make-with-arg-macro
+  "Create a with-arg macro for executing all of the matching functions
+  from ns with the first argument passed implicitly e.g.:
 
-  (make-the-with-thingy monotony.core config)
+  (make-with-arg-macro monotony.core config)
 
   will make a with-config macro against the monotony.core namespace."
-  [api-ns thing-sym]
-  `(defmacro  ~(symbol (str "with-" thing-sym))
+  [ns arg-sym]
+  `(defmacro  ~(symbol (str "with-" arg-sym))
      ~(str "Evaluate body with all "
            *ns* " functions receiving "
-           thing-sym " as their first argument")
-     ~(vector thing-sym (symbol "&") (symbol "body"))
-     `(with-bindings ~(thingy-bindings (quote ~(ns-name api-ns)) (quote ~(ns-name *ns*)) (quote ~thing-sym) ~thing-sym)
+           arg-sym " as their first argument")
+     ~(vector arg-sym (symbol "&") (symbol "body"))
+     `(with-bindings ~(override-bindings (quote ~(ns-name ns)) (quote ~(ns-name *ns*)) (quote ~arg-sym) ~arg-sym)
         ~@~(symbol "body"))))
 
 (defmacro import-api-fns
-  "Expose the core fns from api-ns in the namespace where this is called.
-  All fns that need a parameter naemd thing-sym will be masked with
+  "Expose the fns from ns in the namespace where this is called.
+  All fns that need a first arg named arg-sym will be masked with
   obnoxious exception throwing behavior."
-  [api-ns thing-sym]
-  (let [fail-without-thing (fn [fn-name]
-                             (fn [& args]
-                               (throw (IllegalStateException.
-                                       (str (str fn-name) " must be called from within a with-"
-                                            (str thing-sym) " block.")))))]
+  [ns arg-sym]
+  (letfn [(fail-without-arg [fn-name]
+            (fn [& args]
+              (throw (IllegalStateException.
+                      (str (str fn-name) " must be called from within a with-"
+                           (str arg-sym) " block.")))))]
     ;; Import the fns from api-ns
-    `(do ~@(for [needs-thing (keys (thinged-fn-sym-vars (find-ns api-ns) thing-sym))]
-             `(def ~(with-meta needs-thing {:dynamic true}) ~(fail-without-thing needs-thing)))
-         ~@(for [imports-fine (unthinged-fn-sym-vars (find-ns api-ns) thing-sym)]
+    `(do ~@(for [needs-arg (keys (fn-sym-vars-with-arg (find-ns ns) arg-sym))]
+             `(def ~(with-meta needs-arg {:dynamic true}) ~(fail-without-arg needs-arg)))
+         ~@(for [imports-fine (fn-sym-vars-without-arg (find-ns ns) arg-sym)]
              `(def ~(first imports-fine) ~(deref (second imports-fine)))))))
 
-(defmacro do-all-the-things
-  [api-ns thing-sym]
+(defmacro remap-ns-with-arg
+  [ns arg-sym]
   `(do
-     (import-api-fns ~api-ns ~thing-sym)
-     (make-the-with-thingy ~api-ns ~thing-sym)))
+     (import-api-fns ~ns ~arg-sym)
+     (make-with-arg-macro ~ns ~arg-sym)))
 
-(do-all-the-things monotony.core config)
+(remap-ns-with-arg monotony.core config)
 
