@@ -2,7 +2,6 @@
       :author "Alex Redington"}
   monotony.configured
   (:require [monotony.core :as m]
-            [monotony.fidjet :as f]))
+            [fidjet.core :as f]))
 
 (f/remap-ns-with-arg monotony.core config)
-
