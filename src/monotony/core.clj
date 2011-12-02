@@ -8,14 +8,28 @@
            java.util.Locale))
 
 (defn new-cal
-  "Return a new default calendar instance."
+  "Return a new GMT Calendar instance."
   []
   (Calendar/getInstance (TimeZone/getTimeZone "GMT + 0") Locale/ROOT))
 
+(defn local-cal
+  "Return a new local calendar instance."
+  []
+  (Calendar/getInstance))
+
 (defn new-config
+  "Return a new configuration initialized to Midnight, January 1 1970,
+and Calendars operating in GMT"
   ([] {:calendar new-cal
        :seed (constantly 0)})
   ([spec] (merge (new-config) spec)))
+
+(defn local-config
+  "Returns a new configuration initialized to the system's present
+local time and locale."
+  ([] {:calendar local-cal
+       :seed (fn [] (System/currentTimeMillis))})
+  ([spec] (merge (local-config) spec)))
 
 (defn blank-cal
   "Returns a calendar instance initialized to the UNIX epoch."
@@ -112,7 +126,7 @@
     (lazy-seq
      (when (< (t/millis start) (t/millis end))
        (cons (period-after config start cycle)
-             (cycles-in config [(later 1 cycle start) end] cycle))))))
+             (cycles-in config [(later config 1 cycle start) end] cycle))))))
 
 (defn bounded-cycles-in
   "Break a period down by a cycle into multiple sub-periods, such that
