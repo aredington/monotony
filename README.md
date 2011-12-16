@@ -197,3 +197,11 @@ Note that ALL of the evaluation of monotony.configured functions has
 to occur in the with-config block, and that the monotony.core
 functions are lazy. Thusly, we use doall to realize the sequence in
 its entirety and return it.
+
+## Acknowledgements
+
+Monotony would not be possible without the following people:
+
+* Alex Redington (core maintainer)
+* Alan Dipert (co-design)
+* David Nolen (for the excellent core.logic library and for contributing to monotony.logic)
