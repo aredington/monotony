@@ -22,6 +22,7 @@
 (l/defne millis-ino [cycle millis]
   ([:millisecond 1] (l/succeed l/succeed))
   ([_ _] (l/fresh [relation-millis divided-millis cycle2]
+                (l/!= cycle :millisecond)
                 (contains-tightly cycle relation-millis cycle2)
                 (millis-ino cycle2 divided-millis)
                 (l/project [millis relation-millis divided-millis]
