@@ -26,13 +26,13 @@
 (defne millis-ino [cycle millis]
   ([:millisecond 1])
   ([_ _]
-     (fresh [relation-millis divided-millis cycle2]
+     (fresh [cycle-rel-time subcycle subcycle-millis]
        (!= cycle :millisecond)
-       (contains-tightly cycle relation-millis cycle2)
-       (millis-ino cycle2 divided-millis)
-       (project [millis relation-millis divided-millis]
-         (== divided-millis
-               (/ relation-millis millis))))))
+       (contains-tightly cycle cycle-rel-time subcycle)
+       (millis-ino subcycle subcycle-millis)
+       (project [cycle-rel-time subcycle-millis]
+         (== millis
+             (* cycle-rel-time subcycle-millis))))))
 
 ;(defne cycles-for-milliso )
 
@@ -47,8 +47,6 @@
   ;; (1)
   
   (run* [q] (millis-ino :second q))
-  ;; blows up with failure to cast the logic var to java.lang.Number,
-  ;; despite being in a project. I'm sure I'm doing something wrong
-  ;; because I can get projection to work with Ambrose's example at
-  ;; http://stackoverflow.com/questions/7668956/arithmetic-and-clojure-functions-on-core-logic-lvars
+
+  (run* [q] (millis-ino :leap-year q))
   )
