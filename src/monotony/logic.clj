@@ -2,7 +2,8 @@
       :author "Alex Redington"}
   monotony.logic
   (:refer-clojure :exclude [==])
-  (:require [clojure.core.logic :as l]))
+  (:require [clojure.core.logic :as l]
+            [clojure.core.logic.arithmetic :as la]))
 
 (l/defrel contains-tightly period1 number period2)
 (l/facts contains-tightly [[:second 1000 :millisecond]
@@ -19,32 +20,22 @@
                   (contains-tightly cycle1 t c3)
                   (containso c3 cycle2 true))))
 
+;; millis-ino represents a relation between a keyword and the number
+;; of millis contained therein, e.g.
+;; (millis-ino :millisecond 1)
+;; (millis-ino :second 1000)
+;; (millis-ino :minute 60000)
 (l/defne millis-ino [cycle millis]
   ([:millisecond 1] (l/succeed l/succeed))
-  ([_ _] (l/fresh [relation-millis divided-millis cycle2]
-                (l/!= cycle :millisecond)
-                (contains-tightly cycle relation-millis cycle2)
-                (millis-ino cycle2 divided-millis)
-                (l/project [millis relation-millis divided-millis]
-                           (l/== divided-millis
-                                 (/ relation-millis millis))))))
-
-;(defne cycles-for-milliso )
+  ([_ _] (l/fresh [cycle2-count cycle2 cycle2-millis]
+                  (l/!= cycle :millisecond)
+                  (contains-tightly cycle cycle2-count cycle2)
+                  (millis-ino cycle2 cycle2-millis)
+                  (l/project [cycle2-count cycle2-millis]
+                   (l/== millis (* cycle2-count cycle2-millis))))))
 
 (defn contains [cycle1 cycle2]
   (first (l/run 1 [q] (containso cycle1 cycle2 q))))
 
 (defn cycles-in [cycle]
   (l/run* [q] (containso cycle q true)))
-
-(comment
-  (require ['monotony.logic :as 'ml]
-           ['clojure.core.logic :as 'l])
-  (l/run* [q] (ml/millis-ino :millisecond q))
-  ;; (1)
-  (l/run* [q] (ml/millis-ino :second q))
-  ;; blows up with failure to cast the logic var to java.lang.Number,
-  ;; despite being in a project. I'm sure I'm doing something wrong
-  ;; because I can get projection to work with Ambrose's example at
-  ;; http://stackoverflow.com/questions/7668956/arithmetic-and-clojure-functions-on-core-logic-lvars
-  )
