@@ -1,4 +1,5 @@
 .cake
+.lein*
 pom.xml
 *.jar
 *.war
