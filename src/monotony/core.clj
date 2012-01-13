@@ -188,19 +188,19 @@ local time and locale."
   "Given two or more seqs of monotonically increasing periods, return
   a lazy seq which contains all of the elements of the first seq which
   do not appear in any of the other seqs."
-  ([all-periods first-seq-of-periods-to-remove & seqs-of-periods-to-remove]
-     (difference all-periods (apply combine (conj first-seq-of-periods-to-remove seqs-of-periods-to-remove))))
   ([all-periods periods-to-remove]
      (when-not (empty? all-periods)
        (if (empty? periods-to-remove)
-        all-periods
-        (let [first-period (first all-periods)
-              safe-periods (set (take-while #(< (t/millis (first %)) (t/millis (first first-period))) periods-to-remove))
-              filter-periods (drop-while safe-periods periods-to-remove)
-              unconsumed (rest all-periods)]
-          (if (= (first filter-periods) first-period)
-            (recur unconsumed
-                   filter-periods)
-            (lazy-seq
-             (cons first-period
-                   (difference unconsumed filter-periods)))))))))
+         all-periods
+         (let [first-period (first all-periods)
+               safe-periods (set (take-while #(< (t/millis (first %)) (t/millis (first first-period))) periods-to-remove))
+               filter-periods (drop-while safe-periods periods-to-remove)
+               unconsumed (rest all-periods)]
+           (if (= (first filter-periods) first-period)
+             (recur unconsumed
+                    filter-periods)
+             (lazy-seq
+              (cons first-period
+                    (difference unconsumed filter-periods))))))))
+  ([all-periods first-seq-of-periods-to-remove second-seq-of-periods-to-remove & seqs-of-periods-to-remove]
+     (difference all-periods (apply combine (conj seqs-of-periods-to-remove first-seq-of-periods-to-remove second-seq-of-periods-to-remove)))))
