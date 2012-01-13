@@ -164,11 +164,11 @@ local time and locale."
             (periods config cycle (later config 1 cycle seed))))))
 
 (defn combine
-  "Given one or more seqs of periods, return a lazy seq which
-  interleaves all of them such that:
+  "Given one or more seqs of monotonically increasing periods, return
+  a lazy seq which interleaves all of them such that:
 
-  the start of seq n is greater than the start of seq n-1
-  the duration of seq n is less than the duration of seq n-1"
+  the start of period n is greater than the start of period n-1
+  the duration of period n is less than the duration of period n-1"
 
   [& seqs]
   (when-not (every? empty? seqs)
@@ -183,3 +183,22 @@ local time and locale."
       (lazy-seq
        (cons first-period
              (apply combine (conj unconsumed rest-of-consumed)))))))
+
+(defn difference
+  "Given two or more seqs of monotonically increasing periods, return
+  a lazy seq which contains all of the elements of the first seq which
+  do not appear in any of the other seqs."
+  [all-periods & periods-to-remove]
+  (if (every? empty? periods-to-remove)
+    all-periods
+    (let [combined-periods-to-remove (combine (filter (comp not empty?) periods-to-remove))
+          first-period (first all-periods)
+          safe-periods (set (take-while #(< (t/millis (first %)) (t/millis (first first-period))) combined-periods-to-remove))
+          filter-periods (drop-while safe-periods combined-periods-to-remove)
+          unconsumed (rest all-periods)]
+      (if (= (first filter-periods) first-period)
+        (recur unconsumed
+               filter-periods)
+        (lazy-seq
+         (cons first-period
+               (difference unconsumed filter-periods)))))))
