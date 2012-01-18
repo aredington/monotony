@@ -115,6 +115,17 @@ local time and locale."
    seed
    (milli-before (later config 1 cycle seed))))
 
+;; Recursive lazy seq voodoo ahead! Lazy-seqs can have the resolution
+;; of symbols used in their definition changed out from under them.
+;; For example if one called cycles-in from a namespace other than
+;; monotony.core that also bound to the name cycles-in, the recursive
+;; call will resolve to trying to call the value of
+;; other-namespace/cycles-in as if it were a fn upon when trying to
+;; realize more of the seq. This doesn't work well with fidjet. By
+;; using let to bind the cycles-in and periods names to their values
+;; at the start of the function, lazy-seq will always use the right
+;; thing (monotony.core/cycles-in and monotony.core/periods)
+
 (defn cycles-in
   "Break a period down by a cycle into multiple sub-periods wholly
   contained in that period. The first sub-period will be inclusive of
@@ -126,7 +137,18 @@ local time and locale."
     (lazy-seq
      (when (< (t/millis start) (t/millis end))
        (cons (period-after config start cycle)
-             (cycles-in config [(later config 1 cycle start) end] cycle))))))
+             (monotony.core/cycles-in config [(later config 1 cycle start) end] cycle))))))
+
+(defn periods
+  "Return an lazy infinite sequence of periods with a duration equal to cycle.
+  If seed is provided, the first period will include it. Otherwise, period
+  will include the result of calling *seed*"
+  ([config cycle]
+     (periods config cycle ((:seed config))))
+  ([config cycle seed]
+     (lazy-seq
+      (cons (period-after config (prior-boundary config seed cycle) cycle)
+            (monotony.core/periods config cycle (later config 1 cycle seed))))))
 
 (defn bounded-cycles-in
   "Break a period down by a cycle into multiple sub-periods, such that
@@ -151,17 +173,6 @@ local time and locale."
     (concat (list start-fragment)
             cycles-in-period
             (list end-fragment))))
-
-(defn periods
-  "Return an lazy infinite sequence of periods with a duration equal to cycle.
-  If seed is provided, the first period will include it. Otherwise, period
-  will include the result of calling *seed*"
-  ([config cycle]
-     (periods config cycle ((:seed config))))
-  ([config cycle seed]
-     (lazy-seq
-      (cons (period-after config (prior-boundary config seed cycle) cycle)
-            (periods config cycle (later config 1 cycle seed))))))
 
 (defn combine
   "Given one or more seqs of monotonically increasing periods, return

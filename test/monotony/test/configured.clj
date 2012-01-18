@@ -21,3 +21,9 @@
   (is (= start-of-2011-gmt
          (with-config test-conf
            (prior-boundary a-milli-in-2011 :year)))))
+
+(testing "periods"
+  (is (= 10
+         (count (take 10
+                      (with-config test-conf
+                        (periods :day)))))))
