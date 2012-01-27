@@ -183,3 +183,21 @@ local time and locale."
       (lazy-seq
        (cons first-period
              (apply combine (conj unconsumed rest-of-consumed)))))))
+
+(defn normalize
+  "Given a seq of periods and a cycle, returns a lazy seq where each
+  element is a period of uniform duration equal to to cycle
+
+  Given a counted seq of periods, return a lazy seq where each element
+  is a period of uniform duration, equal to the smallest cycle present
+  in the seq. Raises exception if the input seq is not counted?"
+  ([config seq cycle]
+     nil)
+  ([config seq]
+     nil))
+
+(defn collapse
+  "Given a counted seq of periods, return a lazy seq where each period
+  is the largest possible cycle which captures exactly the same span
+  of time as the seq. Raises exception if the input seq is not counted?"
+  ([config seq]))
