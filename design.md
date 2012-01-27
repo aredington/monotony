@@ -22,3 +22,9 @@ This requires the creation of a temporal inference engine, this work is being do
 ## Interval based reasoning
 
 It is useful to express and reason about times in relation to other times. There is work in enumerating the relations between different periods of time (e.g. http://citeseer.ist.psu.edu/viewdoc/summary?doi=10.1.1.87.4643), and how this can be used to create logical reasoning about times and events relative to some given initial conditions.
+
+## Encoding Existing Conventions
+
+It would be useful for monotony to have encoded many culturally important holidays as predefined infinite sequences of time, e.g. memorial-days, us-holidays, christmasses, etc.
+
+It is also useful to have encodings of day count conventions (e.g. 30/360), providing a way to measure days until significant financial events occur. If these also reflected holidays per above (specifically, bank holidays) it would make monotony provide a great deal of value out of the box.
