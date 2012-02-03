@@ -2,7 +2,8 @@
       :author "Alex Redington"}
   monotony.core
   (:require [monotony.time :as t]
-            [monotony.constants :as c])
+            [monotony.constants :as c]
+            [monotony.logic :as l])
   (:import java.util.Calendar
            java.util.TimeZone
            java.util.Locale))
@@ -213,12 +214,43 @@ local time and locale."
   is a period of uniform duration, equal to the smallest cycle present
   in the seq. Raises exception if the input seq is not counted?"
   ([config seq cycle]
-     nil)
+     (when-not (empty? seq)
+       (let [first (first seq)
+             rest (rest seq)]
+         (if (= (l/approximate-cycle first)
+                cycle)
+           (lazy-seq
+            (cons first
+                  (normalize config rest cycle)))
+           (lazy-seq
+            (concat (bounded-cycles-in config first cycle)
+                    (normalize config rest cycle)))))))
   ([config seq]
-     nil))
+     (when-not (empty? seq)
+       (if (counted? seq)
+         (normalize config seq (l/min-cycle (map l/approximate-cycle seq)))
+         (throw (IllegalArgumentException. "Passed in seq is not counted. Must specify cycle with (normalize config seq cycle)"))))))
+
+(defn contiguous?
+  "Returns true if the periods are contiguous, that is, the end of the
+  first period occurs immediately before the start of the second
+  period, the second period ends immediately before the start of the
+  third, etc."
+  [& periods]
+  (letfn
+      [(contiguous-slice? [[period1 period2]] (= (- (t/millis (period2 0)) (t/millis (period1 1))) 1))]
+   (every? contiguous-slice? (partition 2 1 periods))))
 
 (defn collapse
-  "Given a counted seq of periods, return a lazy seq where each period
+  "Given a seq of periods, return a lazy seq where each period
   is the largest possible cycle which captures exactly the same span
-  of time as the seq. Raises exception if the input seq is not counted?"
-  ([config seq]))
+  of time as the seq."
+  ([config seq]
+     ;; examine the head, find the largest cycle which could align with the head
+     ;; calculate the tail of the period coinciding with that cycle and the head
+     ;; consume from the seq until the remainder is greater than the end of the period
+     ;; test if head + consumed is contiguous
+     ;; test if (last consumed) aligns with the end of the largest cycle
+     ;; if so, return new period collapsing head + consumed
+     ;; otherwise repeat with a smaller cycle
+     ))

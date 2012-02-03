@@ -114,3 +114,10 @@
         contained-millis (- end-millis start-millis)
         cycle-errors (cycle-errors contained-millis)]
     (ffirst (sort-by (comp abs second) cycle-errors))))
+
+(defn min-cycle
+  "Return the smallest cycle keyword contained in a seq of cycle keywords"
+  [cycles]
+  (let [cset (set cycles)]
+    (first
+     (filter #(not-any? (partial cycle-contains? %) (disj cset %)) cset))))

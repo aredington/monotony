@@ -1,7 +1,8 @@
 (ns monotony.test.core
   (:use monotony.core
         clojure.test)
-  (:require [monotony.time :as t]))
+  (:require [monotony.time :as t])
+  (:import java.util.Locale))
 
 (def test-conf (new-config))
 
@@ -66,3 +67,36 @@
     (is (= 261 (count minus-mondays-and-tuesdays)))
     (is (every? (comp not #(period-named? test-conf % :monday)) minus-mondays-and-tuesdays))
     (is (every? (comp not #(period-named? test-conf % :tuesday)) minus-mondays-and-tuesdays))))
+
+(testing "normalize"
+  (let [eight-days (take 8 (periods test-conf :day start-of-2011-gmt))
+        three-weeks (take 3
+                          (periods
+                           test-conf
+                           :week
+                           (next-boundary test-conf (last (last eight-days)) :week)))
+        last-days-of-jan (take 2
+                               (periods
+                                test-conf
+                                :day
+                                (next-boundary test-conf (last (last three-weeks)) :day)))
+        three-months (take 3
+                           (periods
+                            test-conf
+                            :month
+                            (next-boundary test-conf (last (last three-weeks)) :month)))
+        a-maze-of-twisty-periods (concat eight-days three-weeks last-days-of-jan three-months)
+        normalized (normalize test-conf a-maze-of-twisty-periods :day)]
+    (is (= (+ 31 28 31 30) (count normalized)))
+    (is (every? #(= 86399999 (- (t/millis (% 1)) (t/millis (% 0)))) normalized))
+    (is (thrown? IllegalArgumentException (normalize test-conf a-maze-of-twisty-periods)))
+    (is (= (+ 31 28 31 30) (count (normalize test-conf (vec a-maze-of-twisty-periods)))))
+    (is (every? #(= 86399999 (- (t/millis (% 1)) (t/millis (% 0)))) (normalize test-conf (vec a-maze-of-twisty-periods))))))
+
+(testing "contiguous?"
+  (is (contiguous? [1 2] [3 4]))
+  (is (not (contiguous? [1 2] [4 5])))
+  (is (contiguous? [1 2] [3 4] [5 6]))
+  (is (not (contiguous? [1 2] [3 4] [6 7])))
+  (is (apply contiguous? (take 3 (periods test-conf :day))))
+  (is (not (apply contiguous? (map first (partition 1 2 (take 10 (periods test-conf :day))))))))
