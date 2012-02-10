@@ -8,7 +8,7 @@
 (defn- yearly-days-for-month
   "Returns a lazy seq of seqs, with one of the contained seqs
   containing all the days in the month named month-name."
-  [config  month-name]
+  [config month-name]
   (letfn [(months [config] (map #(m/bounded-cycles-in config % :month) (m/periods config :year)))
           (months-named [config month-name] (map
                                              (comp first (partial filter #(m/period-named? config % month-name)))

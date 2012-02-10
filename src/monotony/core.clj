@@ -65,20 +65,6 @@ local time and locale."
        (do (.add cal (cycle c/cycles) amount)
            (.getTime cal)))))
 
-(defn contained-cycle-keywords
-  "Return a list of all the cycle keywords contained by keyword.
-  :year contains :month, :week, :day, :hour, :minute, and :second"
-  [config keyword]
-  (if (contains? c/cycle-keywords keyword)
-    (c/cycle-keywords keyword)
-    (let [after-epoch (fn [kw]
-                        (let [^Calendar blank-cal (blank-cal config)]
-                          (.add blank-cal (kw c/cycles) 1)
-                          (.getTimeInMillis blank-cal)))]
-      (map #(get c/cycles %)
-           (filter #(< (after-epoch %)
-                       (after-epoch keyword)) (keys c/cycles))))))
-
 (defn prior-boundary
   "Returns the start of a bounded cycle including time seed.
 
@@ -87,10 +73,12 @@ local time and locale."
   will return 12:00:00AM of the present year."
   [config seed cycle]
   (let [^Calendar cal (calendar config seed)
-        cycle-vals (reverse (contained-cycle-keywords config cycle))]
-    (doseq [contained-cycle-val cycle-vals]
-      (.set cal contained-cycle-val
-            (.getActualMinimum cal contained-cycle-val)))
+        cycle-fields (map c/cycles (l/cycles-not-in cycle))
+        reset-map (into {} (for [field cycle-fields]
+                             [field (.get cal field)]))]
+    (.clear cal)
+    (doseq [[field value] reset-map]
+      (.set cal field value))
     (.getTime cal)))
 
 (defn next-boundary

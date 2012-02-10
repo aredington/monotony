@@ -5,7 +5,7 @@
 
 (def cycles
   ^{:doc "Calendar constants which represent periods of time."}
-  {:millis Calendar/MILLISECOND
+  {:millisecond Calendar/MILLISECOND
    :second Calendar/SECOND
    :minute Calendar/MINUTE
    :hour Calendar/HOUR_OF_DAY
@@ -36,7 +36,3 @@
    :november [Calendar/NOVEMBER Calendar/MONTH]
    :december [Calendar/DECEMBER Calendar/MONTH]
    })
-
-(def cycle-keywords
-  ^{:doc "Special case Calendar mappings of inferior cycles."}
-  {:week (list Calendar/MILLISECOND Calendar/SECOND Calendar/MINUTE Calendar/HOUR_OF_DAY Calendar/DAY_OF_WEEK)})

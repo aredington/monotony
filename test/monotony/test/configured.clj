@@ -1,6 +1,6 @@
 (ns monotony.test.configured
   (:use monotony.configured
-        clojure.test)
+        lazytest.describe)
   (:require [monotony.time :as t]
             [monotony.core :as c]))
 
@@ -12,12 +12,14 @@
 
 (def a-milli-in-2011 (t/date 1316802232642))
 
-(testing "next-boundary"
-  (is (= start-of-second-week-in-2011-gmt
-         (with-config test-conf
-           (next-boundary start-of-2011-gmt :week)))))
+(describe next-boundary
+          (it "generates dates correctly with next-boundary in a with-config block"
+              (= start-of-second-week-in-2011-gmt
+                 (with-config test-conf
+                   (next-boundary start-of-2011-gmt :week)))))
 
-(testing "prior-boundary"
-  (is (= start-of-2011-gmt
-         (with-config test-conf
-           (prior-boundary a-milli-in-2011 :year)))))
+(describe prior-boundary
+          (it "generates dates correctly with prior-boundary in a with-config block"
+              (= start-of-2011-gmt
+                 (with-config test-conf
+                   (prior-boundary a-milli-in-2011 :year)))))
