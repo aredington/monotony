@@ -132,7 +132,11 @@
   ([_ _ true] (l/fresh [millis1 millis2]
                        (millis-ino cycle1 millis1)
                        (millis-ino cycle2 millis2)
-                       (la/> millis1 millis2))))
+                       (la/> millis1 millis2)))
+  ([_ _ false] (l/fresh [millis1 millis2]
+                        (millis-ino cycle1 millis1)
+                        (millis-ino cycle2 millis2)
+                        (la/>= millis2 millis1))))
 
 (defn cycle-contains?
   "Compares cycle1 and cycle2 as cycle keywords (e.g. :year, :month),
@@ -145,13 +149,14 @@
   cycle"
   [cycle]
   (set (l/run* [q] (containso cycle q true))))
+(alter-var-root #'cycles-in memoize)
 
 (defn cycles-not-in
   "Returns a seq of all cycle keywords for cycles that are not
   contained by cycle"
   [cycle]
-  (s/difference (set (l/run* [q] (cycle-keyword q)))
-                (set (l/run* [q] (containso cycle q true)))))
+  (set (l/run* [q] (containso cycle q false))))
+(alter-var-root #'cycles-in memoize)
 
 (defn cycle-for
   "Returns the cycle keyword which generates a seq of periods such
