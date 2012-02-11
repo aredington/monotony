@@ -34,32 +34,32 @@ local time and locale."
 
 (defn blank-cal
   "Returns a calendar instance initialized to the UNIX epoch."
-  [config]
-  (let [^Calendar blank-cal ((:calendar config))]
+  [{calendar :calendar}]
+  (let [^Calendar blank-cal (calendar)]
     (.setTimeInMillis blank-cal 0)
     blank-cal))
 
 (defn calendar
   "Returns a calendar instance initialized to time"
-  [config time]
-  (let [^Calendar cal ((:calendar config))]
+  [{calendar :calendar} time]
+  (let [^Calendar cal (calendar)]
     (do
       (.setTimeInMillis cal (t/millis time))
       cal)))
 
 (defn period-named?
   "Returns true if the period is the named period, false otherwise."
-  [config period name]
-  (let [named-period (c/named-periods name)
-        ^Calendar start-cal (calendar config (period 0))
-        ^Calendar end-cal (calendar config (period 1))]
-    (and (= (.get start-cal (named-period 1)) (named-period 0))
-         (= (.get end-cal (named-period 1)) (named-period 0)))))
+  [config [start end] name]
+  (let [[value field] (c/named-periods name)
+        ^Calendar start-cal (calendar config start)
+        ^Calendar end-cal (calendar config end)]
+    (and (= (.get start-cal field) value)
+         (= (.get end-cal field) value))))
 
 (defn later
   "Return a time cycle later than seed."
-  ([config amount cycle]
-     (later config amount cycle ((:seed config))))
+  ([{seed :seed :as config} amount cycle]
+     (later config amount cycle (seed)))
   ([config amount cycle seed]
      (let [^Calendar cal (calendar config seed)]
        (do (.add cal (cycle c/cycles) amount)
@@ -109,13 +109,11 @@ local time and locale."
   contained in that period. The first sub-period will be inclusive of
   the start of the period. The last sub-period will be exclusive of
   the end of the period. Returns a lazy-seq of the periods."
-  [config period cycle]
-  (let [start (period 0)
-        end (period 1)]
-    (lazy-seq
-     (when (< (t/millis start) (t/millis end))
-       (cons (period-after config start cycle)
-             (cycles-in config [(later config 1 cycle start) end] cycle))))))
+  [config [start end] cycle]
+  (lazy-seq
+   (when (< (t/millis start) (t/millis end))
+     (cons (period-after config start cycle)
+           (cycles-in config [(later config 1 cycle start) end] cycle)))))
 
 (defn bounded-cycles-in
   "Break a period down by a cycle into multiple sub-periods, such that
@@ -127,10 +125,8 @@ local time and locale."
   Will return a seq of the first partial week of the month, all of the
   weeks starting with Sunday and ending with Saturday, and the last
   partial week of the month"
-  [config period cycle]
-  (let [start (period 0)
-        end (period 1)
-        first-bounded (next-boundary config start cycle)
+  [config [start end] cycle]
+  (let [first-bounded (next-boundary config start cycle)
         last-bounded (prior-boundary config end cycle)
         start-fragment [start (milli-before first-bounded)]
         cycles-in-period (cycles-in config
@@ -145,8 +141,8 @@ local time and locale."
   "Return an lazy infinite sequence of periods with a duration equal to cycle.
   If seed is provided, the first period will include it. Otherwise, period
   will include the result of calling *seed*"
-  ([config cycle]
-     (periods config cycle ((:seed config))))
+  ([{seed :seed :as config} cycle]
+     (periods config cycle (seed)))
   ([config cycle seed]
      (lazy-seq
       (cons (period-after config (prior-boundary config seed cycle) cycle)
@@ -162,13 +158,11 @@ local time and locale."
   [& seqs]
   (when-not (every? empty? seqs)
     (let [filled-seqs (filter (comp not empty?) seqs)
-          seq-sort-criteria (fn [seq]
-                              [(t/millis ((first seq) 0))
-                               (- (- (t/millis ((first seq) 1)) (t/millis ((first seq) 0))))])
+          seq-sort-criteria (fn [[[start end]]]
+                              [(t/millis start)
+                               (- (- (t/millis end) (t/millis start)))])
           seqs-order-by-head (sort-by seq-sort-criteria filled-seqs)
-          first-period (ffirst seqs-order-by-head)
-          rest-of-consumed (rest (first seqs-order-by-head))
-          unconsumed (rest seqs-order-by-head)]
+          [[first-period & rest-of-consumed] & unconsumed] seqs-order-by-head]
       (lazy-seq
        (cons first-period
              (apply combine (conj unconsumed rest-of-consumed)))))))
@@ -177,22 +171,20 @@ local time and locale."
   "Given two or more seqs of monotonically increasing periods, return
   a lazy seq which contains all of the elements of the first seq which
   do not appear in any of the other seqs."
-  ([all-periods periods-to-remove]
+  ([[first-period & unconsumed :as all-periods] periods-to-remove]
      (when-not (empty? all-periods)
        (if (empty? periods-to-remove)
          all-periods
-         (let [first-period (first all-periods)
-               safe-periods (set (take-while #(< (t/millis (first %)) (t/millis (first first-period))) periods-to-remove))
-               filter-periods (drop-while safe-periods periods-to-remove)
-               unconsumed (rest all-periods)]
+         (let [safe-periods (set (take-while #(< (t/millis (first %)) (t/millis (first first-period))) periods-to-remove))
+               filter-periods (drop-while safe-periods periods-to-remove)]
            (if (= (first filter-periods) first-period)
              (recur unconsumed
                     filter-periods)
              (lazy-seq
               (cons first-period
                     (difference unconsumed filter-periods))))))))
-  ([all-periods first-seq-of-periods-to-remove second-seq-of-periods-to-remove & seqs-of-periods-to-remove]
-     (difference all-periods (apply combine (conj seqs-of-periods-to-remove first-seq-of-periods-to-remove second-seq-of-periods-to-remove)))))
+  ([all-periods first-seq-of-periods-to-remove & seqs-of-periods-to-remove]
+     (difference all-periods (apply combine (conj seqs-of-periods-to-remove first-seq-of-periods-to-remove)))))
 
 (defn normalize
   "Given a seq of periods and a cycle, returns a lazy seq where each
@@ -201,18 +193,16 @@ local time and locale."
   Given a counted seq of periods, return a lazy seq where each element
   is a period of uniform duration, equal to the smallest cycle present
   in the seq. Raises exception if the input seq is not counted?"
-  ([config seq cycle]
+  ([config [first & rest :as seq] cycle]
      (when-not (empty? seq)
-       (let [first (first seq)
-             rest (rest seq)]
-         (if (= (l/approximate-cycle first)
-                cycle)
-           (lazy-seq
-            (cons first
-                  (normalize config rest cycle)))
-           (lazy-seq
-            (concat (bounded-cycles-in config first cycle)
-                    (normalize config rest cycle)))))))
+       (if (= (l/approximate-cycle first)
+              cycle)
+         (lazy-seq
+          (cons first
+                (normalize config rest cycle)))
+         (lazy-seq
+          (concat (bounded-cycles-in config first cycle)
+                  (normalize config rest cycle))))))
   ([config seq]
      (when-not (empty? seq)
        (if (counted? seq)
