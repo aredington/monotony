@@ -97,12 +97,19 @@ local time and locale."
   (t/date (- (t/millis time) 1)))
 
 (defn period-after
-  "Returns a period of size equal to cycle, starting
+  "Returns a period of size corresponding to cycle, starting
   at seed."
   [config seed cycle]
   (vector
    seed
    (milli-before (later config 1 cycle seed))))
+
+(defn period-including
+  "Returns a period of size corresponding to cycle, including seed."
+  [config seed cycle]
+  (vector
+   (prior-boundary config seed cycle)
+   (next-boundary config seed cycle)))
 
 (defn cycles-in
   "Break a period down by a cycle into multiple sub-periods wholly
@@ -219,16 +226,37 @@ local time and locale."
       [(contiguous-slice? [[period1 period2]] (= (- (t/millis (period2 0)) (t/millis (period1 1))) 1))]
    (every? contiguous-slice? (partition 2 1 periods))))
 
+(defn cycles-starting-on
+  "Returns the cycle keywords for cycles which can start on the
+  provided time, with the largest cycle first."
+  [config time]
+  (let [periods-including-time (map #(period-including config time %) (keys c/cycles))
+        valid-periods (filter #(= (first %) time) periods-including-time)
+        sorted-periods (sort-by (fn [[start end]] (- (t/millis start) (t/millis end))) valid-periods)]
+    (map l/approximate-cycle sorted-periods)))
+
 (defn collapse
   "Given a seq of periods, return a lazy seq where each period
   is the largest possible cycle which captures exactly the same span
   of time as the seq."
   ([config seq]
-     ;; examine the head, find the largest cycle which could align with the head
-     ;; calculate the tail of the period coinciding with that cycle and the head
-     ;; consume from the seq until the remainder is greater than the end of the period
-     ;; test if head + consumed is contiguous
-     ;; test if (last consumed) aligns with the end of the largest cycle
-     ;; if so, return new period collapsing head + consumed
-     ;; otherwise repeat with a smaller cycle
-     ))
+     (collapse config seq #{}))
+  ([config [[start-of-first end-of-first :as first] & rest :as seq] rejected-collapses]
+     (when-not (empty? seq)
+       (let [all-candidate-cycles (cycles-starting-on config start-of-first)
+             valid-candidate-cycles (drop-while rejected-collapses all-candidate-cycles)]
+         all-candidate-cycles))
+     #_(when-not (empty? seq)
+       (let [potential-collapses (cycles-starting-on config start-of-first)
+             candidate-collapse (first potential-collapses)
+             collapse-hypothesis (period-after config start-of-first candidate-collapse)
+             collapse-tail (last collapse-hypothesis)
+             consumed (take-while #(<= collapse-tail (last %)) rest)
+             contiguous? (contiguous? (cons first consumed))
+             aligned? (= (last (last consumed)) collapse-tail)
+             unconsumed (drop-while #(<= collapse-tail (last %) rest))]
+         (if (and contiguous? aligned?)
+           (lazy-seq
+            (cons collapse-hypothesis
+                  (collapse config unconsumed #{})))
+           (collapse config seq (conj rejected-collapses candidate-collapse)))))))
