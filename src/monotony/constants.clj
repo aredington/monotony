@@ -9,8 +9,8 @@
    :second Calendar/SECOND
    :minute Calendar/MINUTE
    :hour Calendar/HOUR_OF_DAY
-   :day Calendar/DATE
-   :week Calendar/WEEK_OF_YEAR
+   :day Calendar/DAY_OF_WEEK
+   :week Calendar/WEEK_OF_MONTH
    :month Calendar/MONTH
    :year Calendar/YEAR})
 
