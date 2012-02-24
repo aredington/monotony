@@ -178,12 +178,14 @@ local time and locale."
   "Given two or more seqs of monotonically increasing periods, return
   a lazy seq which contains all of the elements of the first seq which
   do not appear in any of the other seqs."
-  ([[first-period & unconsumed :as all-periods] periods-to-remove]
+  ([[[first-period-start _ :as first-period] & unconsumed :as all-periods] periods-to-remove]
      (when-not (empty? all-periods)
        (if (empty? periods-to-remove)
          all-periods
-         (let [safe-periods (set (take-while #(< (t/millis (first %)) (t/millis (first first-period))) periods-to-remove))
-               filter-periods (drop-while safe-periods periods-to-remove)]
+         (let [less-than-start? (fn [period]
+                                  (< (t/millis (first period))
+                                     (t/millis first-period-start)))
+               filter-periods (drop-while less-than-start? periods-to-remove)]
            (if (= (first filter-periods) first-period)
              (recur unconsumed
                     filter-periods)
@@ -191,7 +193,8 @@ local time and locale."
               (cons first-period
                     (difference unconsumed filter-periods))))))))
   ([all-periods first-seq-of-periods-to-remove & seqs-of-periods-to-remove]
-     (difference all-periods (apply combine (conj seqs-of-periods-to-remove first-seq-of-periods-to-remove)))))
+     (difference all-periods (apply combine (conj seqs-of-periods-to-remove
+                                                  first-seq-of-periods-to-remove)))))
 
 (defn normalize
   "Given a seq of periods and a cycle, returns a lazy seq where each
@@ -214,7 +217,8 @@ local time and locale."
      (when-not (empty? seq)
        (if (counted? seq)
          (normalize config seq (l/min-cycle (map l/approximate-cycle seq)))
-         (throw (IllegalArgumentException. "Passed in seq is not counted. Must specify cycle with (normalize config seq cycle)"))))))
+         (throw (IllegalArgumentException.
+                 "Passed in seq is not counted. Must specify cycle with (normalize config seq cycle)"))))))
 
 (defn contiguous?
   "Returns true if the periods are contiguous, that is, the end of the
@@ -223,8 +227,9 @@ local time and locale."
   third, etc."
   [& periods]
   (letfn
-      [(contiguous-slice? [[period1 period2]] (= (- (t/millis (period2 0)) (t/millis (period1 1))) 1))]
-   (every? contiguous-slice? (partition 2 1 periods))))
+      [(contiguous-slice? [[period1 period2]]
+         (= (- (t/millis (period2 0)) (t/millis (period1 1))) 1))]
+    (every? contiguous-slice? (partition 2 1 periods))))
 
 (defn cycles-starting-on
   "Returns the cycle keywords for cycles which can start on the
@@ -232,7 +237,8 @@ local time and locale."
   [config time]
   (let [periods-including-time (map #(period-including config time %) (keys c/cycles))
         valid-periods (filter #(= (first %) time) periods-including-time)
-        sorted-periods (sort-by (fn [[start end]] (- (t/millis start) (t/millis end))) valid-periods)]
+        sorted-periods (sort-by (fn [[start end]]
+                                  (- (t/millis start) (t/millis end))) valid-periods)]
     (map l/approximate-cycle sorted-periods)))
 
 (defn collapse
@@ -241,22 +247,22 @@ local time and locale."
   of time as the seq."
   ([config seq]
      (collapse config seq #{}))
-  ([config [[start-of-first end-of-first :as first] & rest :as seq] rejected-collapses]
+  ([config [[period-start period-end :as first-period] & rest-periods :as seq] rejected-cycles]
      (when-not (empty? seq)
-       (let [all-candidate-cycles (cycles-starting-on config start-of-first)
-             valid-candidate-cycles (drop-while rejected-collapses all-candidate-cycles)]
-         all-candidate-cycles))
-     #_(when-not (empty? seq)
-       (let [potential-collapses (cycles-starting-on config start-of-first)
-             candidate-collapse (first potential-collapses)
-             collapse-hypothesis (period-after config start-of-first candidate-collapse)
-             collapse-tail (last collapse-hypothesis)
-             consumed (take-while #(<= collapse-tail (last %)) rest)
-             contiguous? (contiguous? (cons first consumed))
-             aligned? (= (last (last consumed)) collapse-tail)
-             unconsumed (drop-while #(<= collapse-tail (last %) rest))]
-         (if (and contiguous? aligned?)
-           (lazy-seq
-            (cons collapse-hypothesis
-                  (collapse config unconsumed #{})))
-           (collapse config seq (conj rejected-collapses candidate-collapse)))))))
+       (let [[cycle :as potential-cycles] (drop-while
+                                           rejected-cycles
+                                           (cycles-starting-on config period-start))]
+         (when-not (empty? potential-cycles)
+           (let [[_ tail :as hypothesis] (period-after config
+                                                       period-start
+                                                       cycle)
+                 [consumed unconsumed] (split-with
+                                        #(>= (t/millis tail) (-> % last t/millis))
+                                        seq)
+                 contiguous? (contiguous? consumed)
+                 aligned? (= (last (last consumed)) tail)]
+             (if (and contiguous? aligned?)
+               (lazy-seq
+                (cons hypothesis
+                      (collapse config unconsumed #{})))
+               (recur config seq (conj rejected-cycles cycle)))))))))

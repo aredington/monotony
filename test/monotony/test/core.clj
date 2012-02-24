@@ -149,4 +149,15 @@
           (let [first-week (first (periods test-conf :week start-of-2011-gmt))
                 first-weeks-days (bounded-cycles-in test-conf first-week :day)]
               (it "collapses 7 days in one week to that week" #_{:focus true}
-               (= (collapse test-conf first-weeks-days) first-week))))
+                  (= (collapse test-conf first-weeks-days) (list first-week))))
+          (let [days-from-2011-on (periods test-conf :day start-of-2011-gmt)
+                months-from-2011-on (periods test-conf :month start-of-2011-gmt)
+                january-days (take 31 days-from-2011-on)
+                january-month (take 1 months-from-2011-on)
+                seven-feb-days (take 7 (drop 31 days-from-2011-on))
+                march-days (take 31 (drop 28 (drop 31 days-from-2011-on)))
+                march-month (take 1 (drop 2 months-from-2011-on))
+                some-days (concat january-days seven-feb-days march-days)
+                collapsed-periods (concat january-month seven-feb-days march-month)]
+            (it "collapses march and january 2011 leaving february days intact"
+                (= (collapse test-conf some-days) collapsed-periods))))
