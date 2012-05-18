@@ -94,7 +94,7 @@ local time and locale."
 (defn milli-before
   "Returns the date 1 millisecond before time."
   [time]
-  (t/date (- (t/millis time) 1)))
+  (t/date (dec (t/millis time))))
 
 (defn period-after
   "Returns a period of size corresponding to cycle, starting
