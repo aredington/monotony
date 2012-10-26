@@ -30,3 +30,20 @@
   (date
     [time]
     time))
+
+(defmacro extend-if
+  "If `class` resolves to a class, extend `protocol` to it with `specs`."
+  [class protocol & specs]
+  (when-let [joda-time-class (try (Class/forName (name class))
+                                  (catch java.lang.ClassNotFoundException e
+                                    nil))]
+    `(extend-type ~joda-time-class ~protocol ~@specs)))
+
+(extend-if org.joda.time.DateTime
+           Time
+           (millis [time]
+                   (.getMillis time))
+           (period [time duration]
+                   [(date time) (date (+ (millis time) duration))])
+           (date [time]
+                 (.toDate time)))
