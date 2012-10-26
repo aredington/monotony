@@ -9,6 +9,16 @@
   (millis [time] "Return the number of milliseconds since Jan 1 1970, 12:00AM GMT.")
   (date [time] "Returns a date object equivalent to time."))
 
+(defprotocol Period
+  "All instants between an inclusive start and an inclusive end, with millisecond level resolution."
+  (start [period] "Return the instant at the start of `period`")
+  (end [period] "Return the instant at the end of `period`"))
+
+(extend-protocol Period
+  clojure.lang.APersistentVector
+  (start [period] (first period))
+  (end [period] (second period)))
+
 (extend-protocol Time
   Long
   (millis
@@ -39,7 +49,7 @@
                                     nil))]
     `(extend-type ~joda-time-class ~protocol ~@specs)))
 
-(extend-if org.joda.time.DateTime
+(extend-if org.joda.time.base.AbstractInstant
            Time
            (millis [time]
                    (.getMillis time))
@@ -47,3 +57,10 @@
                    [(date time) (date (+ (millis time) duration))])
            (date [time]
                  (.toDate time)))
+
+(extend-if org.joda.time.base.AbstractInterval
+           Period
+           (start [interval]
+                  (date (.getStart interval)))
+           (end [interval]
+                (date (.getEnd interval))))

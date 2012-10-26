@@ -49,10 +49,10 @@ local time and locale."
 
 (defn period-named?
   "Returns true if the period is the named period, false otherwise."
-  [config [start end] name]
+  [config period name]
   (let [[value field] (c/named-periods name)
-        ^Calendar start-cal (calendar config start)
-        ^Calendar end-cal (calendar config end)]
+        ^Calendar start-cal (calendar config (t/start period))
+        ^Calendar end-cal (calendar config (t/end period))]
     (and (= (.get start-cal field) value)
          (= (.get end-cal field) value))))
 
@@ -116,11 +116,11 @@ local time and locale."
   contained in that period. The first sub-period will be inclusive of
   the start of the period. The last sub-period will be exclusive of
   the end of the period. Returns a lazy-seq of the periods."
-  [config [start end] cycle]
+  [config period cycle]
   (lazy-seq
-   (when (< (t/millis start) (t/millis end))
-     (cons (period-after config start cycle)
-           (cycles-in config [(later config 1 cycle start) end] cycle)))))
+   (when (< (t/millis (t/start period)) (t/millis (t/end period)))
+     (cons (period-after config (t/start period) cycle)
+           (cycles-in config [(later config 1 cycle (t/start period)) (t/end period)] cycle)))))
 
 (defn bounded-cycles-in
   "Break a period down by a cycle into multiple sub-periods, such that
@@ -132,14 +132,14 @@ local time and locale."
   Will return a seq of the first partial week of the month, all of the
   weeks starting with Sunday and ending with Saturday, and the last
   partial week of the month"
-  [config [start end] cycle]
-  (let [first-bounded (next-boundary config start cycle)
-        last-bounded (prior-boundary config end cycle)
-        start-fragment [start (milli-before first-bounded)]
+  [config period cycle]
+  (let [first-bounded (next-boundary config (t/start period) cycle)
+        last-bounded (prior-boundary config (t/end period) cycle)
+        start-fragment [(t/start period) (milli-before first-bounded)]
         cycles-in-period (cycles-in config
                                     [first-bounded
                                      (milli-before last-bounded)] cycle)
-        end-fragment [last-bounded end]]
+        end-fragment [last-bounded (t/end period)]]
     (concat (list start-fragment)
             cycles-in-period
             (list end-fragment))))
@@ -165,9 +165,9 @@ local time and locale."
   [& seqs]
   (when-not (every? empty? seqs)
     (let [filled-seqs (filter (comp not empty?) seqs)
-          seq-sort-criteria (fn [[[start end]]]
-                              [(t/millis start)
-                               (- (- (t/millis end) (t/millis start)))])
+          seq-sort-criteria (fn [[period]]
+                              [(t/millis (t/start period))
+                               (- (- (t/millis (t/end period)) (t/millis (t/start period))))])
           seqs-order-by-head (sort-by seq-sort-criteria filled-seqs)
           [[first-period & rest-of-consumed] & unconsumed] seqs-order-by-head]
       (lazy-seq
@@ -178,13 +178,13 @@ local time and locale."
   "Given two or more seqs of monotonically increasing periods, return
   a lazy seq which contains all of the elements of the first seq which
   do not appear in any of the other seqs."
-  ([[[first-period-start _ :as first-period] & unconsumed :as all-periods] periods-to-remove]
+  ([[first-period & unconsumed :as all-periods] periods-to-remove]
      (when-not (empty? all-periods)
        (if (empty? periods-to-remove)
          all-periods
          (let [less-than-start? (fn [period]
-                                  (< (t/millis (first period))
-                                     (t/millis first-period-start)))
+                                  (< (t/millis (t/start period))
+                                     (t/millis (t/start first-period))))
                filter-periods (drop-while less-than-start? periods-to-remove)]
            (if (= (first filter-periods) first-period)
              (recur unconsumed
@@ -228,7 +228,7 @@ local time and locale."
   [& periods]
   (letfn
       [(contiguous-slice? [[period1 period2]]
-         (= (- (t/millis (period2 0)) (t/millis (period1 1))) 1))]
+         (= (- (t/millis (t/start period2)) (t/millis (t/end period1))) 1))]
     (every? contiguous-slice? (partition 2 1 periods))))
 
 (defn cycles-starting-on
@@ -236,9 +236,9 @@ local time and locale."
   provided time, with the largest cycle first."
   [config time]
   (let [periods-including-time (map #(period-including config time %) (keys c/cycles))
-        valid-periods (filter #(= (first %) time) periods-including-time)
-        sorted-periods (sort-by (fn [[start end]]
-                                  (- (t/millis start) (t/millis end))) valid-periods)]
+        valid-periods (filter #(= (t/start %) time) periods-including-time)
+        sorted-periods (sort-by (fn [period]
+                                  (- (t/millis (t/start period)) (t/millis (t/end period)))) valid-periods)]
     (map l/approximate-cycle sorted-periods)))
 
 (defn collapse
@@ -247,20 +247,20 @@ local time and locale."
   of time as the seq."
   ([config seq]
      (collapse config seq #{}))
-  ([config [[period-start period-end :as first-period] & rest-periods :as seq] rejected-cycles]
+  ([config [first-period & rest-periods :as seq] rejected-cycles]
      (when-not (empty? seq)
        (let [[cycle :as potential-cycles] (drop-while
                                            rejected-cycles
-                                           (cycles-starting-on config period-start))]
+                                           (cycles-starting-on config (t/start first-period)))]
          (when-not (empty? potential-cycles)
            (let [[_ tail :as hypothesis] (period-after config
-                                                       period-start
+                                                       (t/start first-period)
                                                        cycle)
                  [consumed unconsumed] (split-with
-                                        #(>= (t/millis tail) (-> % last t/millis))
+                                        #(>= (t/millis tail) (-> % t/end t/millis))
                                         seq)
                  contiguous? (contiguous? consumed)
-                 aligned? (= (last (last consumed)) tail)]
+                 aligned? (= (t/end (last consumed)) tail)]
              (if (and contiguous? aligned?)
                (lazy-seq
                 (cons hypothesis
