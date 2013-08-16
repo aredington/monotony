@@ -52,7 +52,8 @@ local time and locale."
   [config period name]
   (let [[value field] (if-let [ret (c/named-periods (keyword name))]
                         ret
-                        (throw (IllegalArgumentException. (str "Unknown period name: " name))))
+                        (throw (IllegalArgumentException.
+                                (str "Unknown period name: " name))))
         ^Calendar start-cal (calendar config (t/start period))
         ^Calendar end-cal (calendar config (t/end period))]
     (and (= (.get start-cal field) value)
@@ -122,7 +123,8 @@ local time and locale."
   (lazy-seq
    (when (< (t/millis (t/start period)) (t/millis (t/end period)))
      (cons (period-after config (t/start period) cycle)
-           (cycles-in config [(later config 1 cycle (t/start period)) (t/end period)] cycle)))))
+           (cycles-in config [(later config 1 cycle (t/start period))
+                              (t/end period)] cycle)))))
 
 (defn bounded-cycles-in
   "Break a period down by a cycle into multiple sub-periods, such that
@@ -149,7 +151,7 @@ local time and locale."
 (defn periods
   "Return an lazy infinite sequence of periods with a duration equal to cycle.
   If seed is provided, the first period will include it. Otherwise, period
-  will include the result of calling *seed*"
+  will include the seed in config."
   ([{seed :seed :as config} cycle]
      (periods config cycle (seed)))
   ([config cycle seed]
@@ -169,7 +171,8 @@ local time and locale."
     (let [filled-seqs (filter (comp not empty?) seqs)
           seq-sort-criteria (fn [[period]]
                               [(t/millis (t/start period))
-                               (- (- (t/millis (t/end period)) (t/millis (t/start period))))])
+                               (- (- (t/millis (t/end period))
+                                     (t/millis (t/start period))))])
           seqs-order-by-head (sort-by seq-sort-criteria filled-seqs)
           [[first-period & rest-of-consumed] & unconsumed] seqs-order-by-head]
       (lazy-seq
@@ -240,7 +243,8 @@ local time and locale."
   (let [periods-including-time (map #(period-including config time %) (keys c/cycles))
         valid-periods (filter #(= (t/start %) time) periods-including-time)
         sorted-periods (sort-by (fn [period]
-                                  (- (t/millis (t/start period)) (t/millis (t/end period)))) valid-periods)]
+                                  (- (t/millis (t/start period))
+                                     (t/millis (t/end period)))) valid-periods)]
     (map l/approximate-cycle sorted-periods)))
 
 (defn collapse
@@ -253,7 +257,8 @@ local time and locale."
      (when-not (empty? seq)
        (let [[cycle :as potential-cycles] (drop-while
                                            rejected-cycles
-                                           (cycles-starting-on config (t/start first-period)))]
+                                           (cycles-starting-on config
+                                                               (t/start first-period)))]
          (when-not (empty? potential-cycles)
            (let [[_ tail :as hypothesis] (period-after config
                                                        (t/start first-period)
