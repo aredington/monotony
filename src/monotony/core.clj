@@ -50,7 +50,9 @@ local time and locale."
 (defn period-named?
   "Returns true if the period is the named period, false otherwise."
   [config period name]
-  (let [[value field] (c/named-periods name)
+  (let [[value field] (if-let [ret (c/named-periods (keyword name))]
+                        ret
+                        (throw (IllegalArgumentException. (str "Unknown period name: " name))))
         ^Calendar start-cal (calendar config (t/start period))
         ^Calendar end-cal (calendar config (t/end period))]
     (and (= (.get start-cal field) value)

@@ -1,6 +1,6 @@
 (ns monotony.test.configured
   (:use monotony.configured
-        lazytest.describe)
+        midje.sweet)
   (:require [monotony.time :as t]
             [monotony.core :as c]))
 
@@ -12,14 +12,12 @@
 
 (def a-milli-in-2011 (t/date 1316802232642))
 
-(describe next-boundary
-          (it "generates dates correctly with next-boundary in a with-config block"
-              (= start-of-second-week-in-2011-gmt
-                 (with-config test-conf
-                   (next-boundary start-of-2011-gmt :week)))))
+(facts "about `next-boundary`"
+       (fact "generates dates correctly with next-boundary in a with-config block"
+             (with-config test-conf
+               (next-boundary start-of-2011-gmt :week)) => start-of-second-week-in-2011-gmt))
 
-(describe prior-boundary
-          (it "generates dates correctly with prior-boundary in a with-config block"
-              (= start-of-2011-gmt
-                 (with-config test-conf
-                   (prior-boundary a-milli-in-2011 :year)))))
+(facts "about `prior-boundary`"
+          (fact "generates dates correctly with prior-boundary in a with-config block"
+                (with-config test-conf
+                  (prior-boundary a-milli-in-2011 :year)) => start-of-2011-gmt))

@@ -7,3 +7,6 @@ lib
 classes
 build
 ./monotony
+/target/repl-port
+/target/stale/dependencies
+/target/stale/extract-native.dependencies
