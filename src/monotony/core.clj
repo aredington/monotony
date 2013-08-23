@@ -112,15 +112,17 @@ local time and locale."
   (prior-boundary (now) :year)
 
   will return 12:00:00AM of the present year."
-  [config seed cycle]
-  (let [^Calendar cal (calendar config seed)
-        cycle-fields (map c/cycles (l/cycles-not-in cycle))
-        reset-map (into {} (for [field cycle-fields]
-                             [field (.get cal field)]))]
-    (.clear cal)
-    (doseq [[field value] reset-map]
-      (.set cal field value))
-    (.getTime cal)))
+  ([{seed :seed :as config} cycle]
+     (prior-boundary config (seed) cycle))
+  ([config seed cycle]
+     (let [^Calendar cal (calendar config seed)
+           cycle-fields (map c/cycles (l/cycles-not-in cycle))
+           reset-map (into {} (for [field cycle-fields]
+                                [field (.get cal field)]))]
+       (.clear cal)
+       (doseq [[field value] reset-map]
+         (.set cal field value))
+       (.getTime cal))))
 
 (defn next-boundary
   "Returns the next clean boundary of a cycle after
@@ -129,8 +131,10 @@ local time and locale."
   (next-boundary (now) :year)
 
   will return 12:00:00AM on Jan 1st of the next year."
-  [config seed cycle]
-  (prior-boundary config (later config 1 cycle seed) cycle))
+  ([{seed :seed :as config} cycle]
+     (next-boundary config (seed) cycle))
+  ([config seed cycle]
+     (prior-boundary config (later config 1 cycle seed) cycle)))
 
 (defn milli-before
   "Returns the date 1 millisecond before time."
