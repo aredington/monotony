@@ -4,7 +4,7 @@
   (:import java.util.Calendar))
 
 (def cycles
-  ^{:doc "Calendar constants which represent periods of time."}
+  "Calendar constants which represent periods of time."
   {:millisecond Calendar/MILLISECOND
    :second Calendar/SECOND
    :minute Calendar/MINUTE
@@ -15,7 +15,7 @@
    :year Calendar/YEAR})
 
 (def named-periods
-  ^{:doc "Periods with specific names, e.g. Monday, Tuesday, Friday, January, March"}
+  "Periods with specific names, e.g. Monday, Tuesday, Friday, January, March"
   {:sunday [Calendar/SUNDAY Calendar/DAY_OF_WEEK]
    :monday [Calendar/MONDAY Calendar/DAY_OF_WEEK]
    :tuesday [Calendar/TUESDAY Calendar/DAY_OF_WEEK]
@@ -36,3 +36,10 @@
    :november [Calendar/NOVEMBER Calendar/MONTH]
    :december [Calendar/DECEMBER Calendar/MONTH]
    })
+
+(def period-names
+  "Inversion of named-periods to a map hierarchically nested for FIELD -> CONSTANT -> KEYWORD"
+  (reduce (fn [m [kw v]]
+            (assoc-in m (reverse v) kw))
+          {}
+          named-periods))

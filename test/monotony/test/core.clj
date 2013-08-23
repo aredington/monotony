@@ -14,14 +14,29 @@
 
 (def start-of-new-years-week-2011 (t/date 1293321600000))
 
-(let [victim-period (period-after test-conf start-of-2011-gmt :day)]
-  (facts "about `period-named?`"
+
+(facts "about `period-named?`"
+       (let [victim-period (period-after test-conf start-of-2011-gmt :day)]
          (fact "accepts keywords as the period name"
                (period-named? test-conf victim-period :saturday) => true)
          (fact "accepts strings as the period name"
                (period-named? test-conf victim-period "saturday") => true)
          (fact "throws an exception with a useful error message when the period name is not intelligible to monotony"
                (period-named? test-conf victim-period "foo barington st baz") => (throws IllegalArgumentException #"Unknown period name"))))
+
+(facts "about `period-name"
+       (let [day-period (period-after test-conf start-of-2011-gmt :day)
+             hour-period (period-after test-conf start-of-2011-gmt :hour)
+             month-period (period-after test-conf start-of-2011-gmt :month)
+             year-period (period-after test-conf start-of-2011-gmt :year)]
+         (fact "names days"
+               (period-name test-conf day-period) => :saturday)
+         (fact "names midnight"
+               (period-name test-conf hour-period) => :midnight)
+         (fact "names months"
+               (period-name test-conf month-period) => :january)
+         (fact "names years with an integer"
+               (period-name test-conf year-period) => 2011)))
 
 (facts "about `next-boundary`"
        (fact "generates the next boundary from a timestamp, config and cycle"

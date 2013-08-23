@@ -59,6 +59,44 @@ local time and locale."
     (and (= (.get start-cal field) value)
          (= (.get end-cal field) value))))
 
+(defmulti ^:private instant-name (fn [cycle-constant cal] cycle-constant))
+
+(defmethod instant-name Calendar/HOUR_OF_DAY
+  [cycle-constant cal]
+  (case (.get cal cycle-constant)
+    0 :midnight
+    12 :noon
+    nil))
+
+(defmethod instant-name Calendar/DAY_OF_WEEK
+  [cycle-constant cal]
+  (-> cycle-constant
+      c/period-names
+      (get (.get cal cycle-constant))))
+
+(defmethod instant-name Calendar/MONTH
+  [cycle-constant cal]
+  (-> cycle-constant
+      c/period-names
+      (get (.get cal cycle-constant))))
+
+(defmethod instant-name Calendar/YEAR
+  [cycle-constant cal]
+  (.get cal cycle-constant))
+
+(defn period-name
+  "Return the period name for a period when the period corresponds to
+  a cycle length and is correctly bounded."
+  [config period]
+  (let [cycle (l/approximate-cycle period)
+        cycle-constant (c/cycles cycle)
+        ^Calendar start-cal (calendar config (t/start period))
+        ^Calendar end-cal (calendar config (t/end period))
+        start-name (instant-name cycle-constant start-cal)
+        end-name (instant-name cycle-constant end-cal)]
+    (when (= start-name end-name)
+      start-name)))
+
 (defn later
   "Return a time cycle later than seed."
   ([{seed :seed :as config} amount cycle]
