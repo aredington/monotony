@@ -1,4 +1,4 @@
-(defproject monotony "0.0.6-SNAPSHOT"
+(defproject monotony "0.0.6"
   :description "Time utilities for humans."
   :dependencies [[org.clojure/clojure "1.4.0"]
                  [org.clojure/core.logic "0.6.7"]
