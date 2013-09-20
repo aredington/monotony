@@ -11,7 +11,7 @@
 (defn new-cal
   "Return a new GMT Calendar instance."
   []
-  (Calendar/getInstance (TimeZone/getTimeZone "GMT + 0") Locale/ROOT))
+  (Calendar/getInstance (TimeZone/getTimeZone "GMT - 0") Locale/ROOT))
 
 (defn local-cal
   "Return a new local calendar instance."
