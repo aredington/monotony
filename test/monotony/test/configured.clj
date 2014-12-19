@@ -1,6 +1,6 @@
 (ns monotony.test.configured
   (:use monotony.configured
-        midje.sweet)
+        clojure.test)
   (:require [monotony.time :as t]
             [monotony.core :as c]))
 
@@ -14,7 +14,8 @@
 
 (def a-milli-in-2011 (t/date 1316802232642))
 
-(facts "about `period-name`"
-       (fact "correctly identifies periods"
-             (with-config test-conf
-               (period-name first-day-of-2011)) => :saturday))
+(deftest configured-test
+  (testing "`period-name`"
+    (testing "correctly identifies periods"
+      (is (= (with-config test-conf
+               (period-name first-day-of-2011)) :saturday)))))

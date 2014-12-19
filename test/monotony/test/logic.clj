@@ -1,38 +1,46 @@
 (ns monotony.test.logic
   (:use monotony.logic
-        midje.sweet)
-  (:require [clojure.core.logic :as l]))
+        clojure.test)
+  (:require [clojure.core.logic :as l]
+            [clojure.core.logic.pldb :as pldb]))
 
-(facts "about `smallest-varianto`"
-       (fact "holds for :month :february true"
-             (first (l/run 1 [q] (smallest-varianto :month :february q))) => true)
-       (fact "holds for :month :march false"
-             (first (l/run 1 [q] (smallest-varianto :month :march q))) => false))
+(deftest smallest-varianto-test
+  (pldb/with-db time-db
+    (testing "`smallest-varianto`"
+      (testing "holds for :month :february true"
+        (is (first (l/run 1 [q] (smallest-varianto :month :february q)))))
+      (testing "holds for :month :march false"
+        (is (not (first (l/run 1 [q] (smallest-varianto :month :march q)))))))))
 
-(facts "about `millis-ino`"
-       (fact "holds for :month and the number of millis in feb"
-             (l/run 1 [q] (millis-ino :month (* 1000 60 60 24 28))) => (comp not empty?))
-       (fact "holds for :year and the number of millis in a non-leap year"
-             (l/run 1 [q] (millis-ino :year (* 1000 60 60 24 365))) => (comp not empty?)))
+(deftest millis-ino-test
+  (pldb/with-db time-db
+    (testing "`millis-ino`"
+      (testing "holds for :month and the number of millis in feb"
+        (is (not (empty? (l/run 1 [q] (millis-ino :month (* 1000 60 60 24 28)))))))
+      (testing "holds for :year and the number of millis in a non-leap year"
+        (is (not (empty? (l/run 1 [q] (millis-ino :year (* 1000 60 60 24 365))))))))))
 
-(facts "about `cycle-contains?`"
-       (fact "is true for :week contains :day"
-             (cycle-contains? :week :day) => true)
-       (fact "is true for :month contains :week"
-             (cycle-contains? :month :week) => true)
-       (fact "is true for :year contains :month"
-             (cycle-contains? :year :month) => true)
-       (fact "is false for :year contains :year"
-             (cycle-contains? :year :year) => falsey))
+(deftest cycle-contains?-test
+  (testing "`cycle-contains?`"
+    (testing "is true for :week contains :day"
+      (is (cycle-contains? :week :day)))
+    (testing "is true for :month contains :week"
+      (is (cycle-contains? :month :week)))
+    (testing "is true for :year contains :month"
+      (is (cycle-contains? :year :month)))
+    (testing "is false for :year contains :year"
+      (is (not (cycle-contains? :year :year))))))
 
-(facts "about `cycles-in`"
-       (fact "includes all smaller cycles for :day"
-             (cycles-in :day) => #{:millisecond :second :minute :hour} )
-       (fact "includes all smaller cycless for :month"
-             (cycles-in :month) => #{:millisecond :second :minute :hour :day :week})
-       (fact "includes all smaller cycles for year"
-           (cycles-in :year) => #{:millisecond :second :minute :hour :day :week :month} ))
+(deftest cycles-in-test
+  (testing "`cycles-in`"
+    (testing "includes all smaller cycles for :day"
+      (is (= (cycles-in :day)) #{:millisecond :second :minute :hour}))
+    (testing "includes all smaller cycless for :month"
+      (is (= (cycles-in :month) #{:millisecond :second :minute :hour :day :week})))
+    (testing "includes all smaller cycles for year"
+      (is (= (cycles-in :year) #{:millisecond :second :minute :hour :day :week :month})) )))
 
-(facts "about `cycles-not-in`"
-       (fact "returns #{:week :month :year} for :day"
-             (cycles-not-in :day) => #{:week :month :year :day} ))
+(deftest cycles-not-in-test
+  (testing "`cycles-not-in`"
+    (testing "returns #{:week :month :year} for :day"
+      (is (= (cycles-not-in :day) #{:week :month :year :day})) )))

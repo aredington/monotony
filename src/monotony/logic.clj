@@ -5,110 +5,112 @@
   (:use [clojure.math.numeric-tower :only (abs)])
   (:require [clojure.set :as s]
             [clojure.core.logic :as l]
+            [clojure.core.logic.pldb :as pldb]
             [clojure.core.logic.arithmetic :as la]
-            [monotony.time :as t])
-  )
+            [monotony.time :as t]))
 
-(l/defrel cycle-keyword cycle)
-(l/facts cycle-keyword [[:millisecond]
-                [:second]
-                [:minute]
-                [:hour]
-                [:day]
-                [:week]
-                [:month]
-                [:year]])
+(pldb/db-rel cycle-keyword cycle)
 
-(l/defrel contains-tightly cycle1 number cycle2)
-(l/facts contains-tightly [[:second 1000 :millisecond]
-                           [:minute 60 :second]
-                           [:hour 60 :minute]
-                           [:day 24 :hour]
-                           [:week 7 :day]])
+(pldb/db-rel contains-tightly cycle1 number cycle2)
 
-(l/defrel contains-varying period-name number cycle)
-(l/facts contains-varying [[:january 31 :day]
-                           [:february 28 :day]
-                           [:february-leap 29 :day]
-                           [:march 31 :day]
-                           [:april 30 :day]
-                           [:may 31 :day]
-                           [:june 30 :day]
-                           [:august 31 :day]
-                           [:september 30 :day]
-                           [:october 31 :day]
-                           [:november 30 :day]
-                           [:december 31 :day]
-                           [:yearm0 365 :day]
-                           [:yearm1 365 :day]
-                           [:yearm2 365 :day]
-                           [:yearm3 366 :day]])
+(pldb/db-rel contains-varying period-name number cycle)
 
-(l/defrel period-named name named-cycle index containing-cycle)
-(l/facts period-named [;; Years of a leap cycle
-                       [:yearm0 :year 0 :leap-year-cycle]
-                       [:yearm1 :year 1 :leap-year-cycle]
-                       [:yearm2 :year 2 :leap-year-cycle]
-                       [:yearm3 :year 3 :leap-year-cycle]
-                       ;; Months of the year
-                       [:january :month 0 :year]
-                       [:february :month 1 :year]
-                       [:march :month 2 :year]
-                       [:april :month 3 :year]
-                       [:may :month 4 :year]
-                       [:june :month 5 :year]
-                       [:july :month 6 :year]
-                       [:august :month 7 :year]
-                       [:september :month 8 :year]
-                       [:october :month 9 :year]
-                       [:november :month 10 :year]
-                       [:december :month 11 :year]
-                       ;; Days of the week
-                       [:monday :day 0 :week]
-                       [:tuesday :day 1 :week]
-                       [:wednesday :day 2 :week]
-                       [:thursday :day 3 :week]
-                       [:friday :day 4 :week]
-                       [:saturday :day 5 :week]
-                       [:sunday :day 6 :week]
-                       ;; Hours of the day
-                       [:12am :hour 0 :day]
-                       [:midnight :hour 0 :day]
-                       [:1am :hour 1 :day]
-                       [:2am :hour 2 :day]
-                       [:3am :hour 3 :day]
-                       [:4am :hour 4 :day]
-                       [:5am :hour 5 :day]
-                       [:6am :hour 6 :day]
-                       [:7am :hour 7 :day]
-                       [:8am :hour 8 :day]
-                       [:9am :hour 9 :day]
-                       [:10am :hour 10 :day]
-                       [:11am :hour 11 :day]
-                       [:12pm :hour 12 :day]
-                       [:noon :hour 12 :day]
-                       [:1pm :hour 1 :day]
-                       [:2pm :hour 2 :day]
-                       [:3pm :hour 3 :day]
-                       [:4pm :hour 4 :day]
-                       [:5pm :hour 5 :day]
-                       [:6pm :hour 6 :day]
-                       [:7pm :hour 7 :day]
-                       [:8pm :hour 8 :day]
-                       [:9pm :hour 9 :day]
-                       [:10pm :hour 10 :day]
-                       [:11pm :hour 11 :day]
-                       ])
+(pldb/db-rel period-named name named-cycle index containing-cycle)
+
+(def time-db
+  (pldb/db
+   [cycle-keyword :millisecond]
+   [cycle-keyword :second]
+   [cycle-keyword :minute]
+   [cycle-keyword :hour]
+   [cycle-keyword :day]
+   [cycle-keyword :week]
+   [cycle-keyword :month]
+   [cycle-keyword :year]
+   [contains-tightly :second 1000 :millisecond]
+   [contains-tightly :minute 60 :second]
+   [contains-tightly :hour 60 :minute]
+   [contains-tightly :day 24 :hour]
+   [contains-tightly :week 7 :day]
+   [contains-varying :january 31 :day]
+   [contains-varying :february 28 :day]
+   [contains-varying :february-leap 29 :day]
+   [contains-varying :march 31 :day]
+   [contains-varying :april 30 :day]
+   [contains-varying :may 31 :day]
+   [contains-varying :june 30 :day]
+   [contains-varying :august 31 :day]
+   [contains-varying :september 30 :day]
+   [contains-varying :october 31 :day]
+   [contains-varying :november 30 :day]
+   [contains-varying :december 31 :day]
+   [contains-varying :yearm0 365 :day]
+   [contains-varying :yearm1 365 :day]
+   [contains-varying :yearm2 365 :day]
+   [contains-varying :yearm3 366 :day]
+   ;; Years of a leap cycle
+   [period-named :yearm0 :year 0 :leap-year-cycle]
+   [period-named :yearm1 :year 1 :leap-year-cycle]
+   [period-named :yearm2 :year 2 :leap-year-cycle]
+   [period-named :yearm3 :year 3 :leap-year-cycle]
+   ;; Months of the year
+   [period-named :january :month 0 :year]
+   [period-named :february :month 1 :year]
+   [period-named :march :month 2 :year]
+   [period-named :april :month 3 :year]
+   [period-named :may :month 4 :year]
+   [period-named :june :month 5 :year]
+   [period-named :july :month 6 :year]
+   [period-named :august :month 7 :year]
+   [period-named :september :month 8 :year]
+   [period-named :october :month 9 :year]
+   [period-named :november :month 10 :year]
+   [period-named :december :month 11 :year]
+   ;; Days of the week
+   [period-named :monday :day 0 :week]
+   [period-named :tuesday :day 1 :week]
+   [period-named :wednesday :day 2 :week]
+   [period-named :thursday :day 3 :week]
+   [period-named :friday :day 4 :week]
+   [period-named :saturday :day 5 :week]
+   [period-named :sunday :day 6 :week]
+   ;; Hours of the day
+   [period-named :12am :hour 0 :day]
+   [period-named :midnight :hour 0 :day]
+   [period-named :1am :hour 1 :day]
+   [period-named :2am :hour 2 :day]
+   [period-named :3am :hour 3 :day]
+   [period-named :4am :hour 4 :day]
+   [period-named :5am :hour 5 :day]
+   [period-named :6am :hour 6 :day]
+   [period-named :7am :hour 7 :day]
+   [period-named :8am :hour 8 :day]
+   [period-named :9am :hour 9 :day]
+   [period-named :10am :hour 10 :day]
+   [period-named :11am :hour 11 :day]
+   [period-named :12pm :hour 12 :day]
+   [period-named :noon :hour 12 :day]
+   [period-named :1pm :hour 1 :day]
+   [period-named :2pm :hour 2 :day]
+   [period-named :3pm :hour 3 :day]
+   [period-named :4pm :hour 4 :day]
+   [period-named :5pm :hour 5 :day]
+   [period-named :6pm :hour 6 :day]
+   [period-named :7pm :hour 7 :day]
+   [period-named :8pm :hour 8 :day]
+   [period-named :9pm :hour 9 :day]
+   [period-named :10pm :hour 10 :day]
+   [period-named :11pm :hour 11 :day]))
 
 (l/defne smallest-varianto [cycle named-period predicate]
   ([:month :february true] l/s#)
   ([:month _ false] (l/fresh [index]
-                             (l/!= named-period :february)
-                             (period-named named-period cycle index :year)))
+                      (l/!= named-period :february)
+                      (period-named named-period cycle index :year)))
   ([:year :yearm3 false] l/s#)
   ([:year _ true] (l/fresh [index]
-                           (l/!= named-period :yearm3)
-                           (period-named named-period cycle index :leap-year-cycle))))
+                    (l/!= named-period :yearm3)
+                    (period-named named-period cycle index :leap-year-cycle))))
 
 ;; millis-ino represents a relation between a keyword and the number
 ;; of millis contained therein, e.g.
@@ -142,45 +144,51 @@
   "Compares cycle1 and cycle2 as cycle keywords (e.g. :year, :month),
   returns truthy if cycle1 is a larger cycle of time than cycle2"
   [cycle1 cycle2]
-  (first (l/run 1 [q] (containso cycle1 cycle2 q))))
+  (pldb/with-db time-db
+    (first (l/run 1 [q] (containso cycle1 cycle2 q)))))
 
 (defn cycles-in
   "Returns a seq of all cycle keywords for cycles that are contained by
   cycle"
   [cycle]
-  (set (l/run* [q] (containso cycle q true))))
+  (pldb/with-db time-db
+    (set (l/run* [q] (containso cycle q true)))))
 (alter-var-root #'cycles-in memoize)
 
 (defn cycles-not-in
   "Returns a seq of all cycle keywords for cycles that are not
   contained by cycle"
   [cycle]
-  (set (l/run* [q] (containso cycle q false))))
+  (pldb/with-db time-db
+    (set (l/run* [q] (containso cycle q false)))))
 (alter-var-root #'cycles-in memoize)
 
 (defn cycle-for
   "Returns the cycle keyword which generates a seq of periods such
   that each period will be named period-name"
   [period-name]
-  (first (l/run 1 [q]
-                (l/fresh [cycle-size index]
-                         (period-named period-name cycle-size index q)))))
+  (pldb/with-db time-db
+    (first (l/run 1 [q]
+             (l/fresh [cycle-size index]
+               (period-named period-name cycle-size index q))))))
 
 (defn cycle-millis
   "Returns the number of milliseconds for the smallest period
   generated by a cycle keyword."
   [cycle]
-  (first (l/run 1 [q] (millis-ino cycle q))))
+  (pldb/with-db time-db
+    (first (l/run 1 [q] (millis-ino cycle q)))))
 (alter-var-root #'cycle-millis memoize)
 
 (defn- cycle-errors
   [milliseconds]
-  (l/run*
-   [q]
-   (l/fresh [cycle cycle-millis]
-            (millis-ino cycle cycle-millis)
-            (l/project [cycle-millis]
-                       (l/== q [cycle (- milliseconds cycle-millis)])))))
+  (pldb/with-db time-db
+    (l/run*
+      [q]
+      (l/fresh [cycle cycle-millis]
+        (millis-ino cycle cycle-millis)
+        (l/project [cycle-millis]
+                   (l/== q [cycle (- milliseconds cycle-millis)]))))))
 
 (defn approximate-cycle
   "Returns the cycle keyword which best fits the period passed in"
