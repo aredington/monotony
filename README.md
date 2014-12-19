@@ -28,8 +28,8 @@ HQ!)
 I like to use cake to develop on monotony, so let's take a test drive with
 cake
 
-    cake repl
-    => (require ['monotony.core :as 'm])
+    lein repl
+    => (require '[monotony.core :as m])
 
 Monotony is dealing with time, and for it to be generally useful to
 other Clojure developers it's been designed around an API of pure
@@ -175,28 +175,6 @@ month, we have the infinite sequence of all triclojure meetings.
       EST 2011>] [#<Date Wed Dec 21 18:00:00 EST 2011> #<Date Wed Dec
       21 18:59:59 EST 2011>] [#<Date Wed Jan 18 18:00:00 EST 2012>
       #<Date Wed Jan 18 18:59:59 EST 2012>])
-
-## Configuration Niceties
-
-"Passing around that configuration object is a pain!" I hear
-you. Monotony makes use of fidjet, which means that we can get nice
-config-wrapper blocks for our code by using the monotony.configured
-namespace. Let's do the prior example in monotony.configured:
-
-    (require ['monotony.configured :as 'm])
-    (def conf (m/local-config))
-    (defn third-wednesday [month] (nth (filter #(m/period-named? % :wednesday) (m/bounded-cycles-in month :day)) 2))
-    (defn days [month] (m/bounded-cycles-in month :day))
-    (defn six-pm [day] (nth (m/bounded-cycles-in day :hour) 18))
-    (m/with-config conf
-      (def months (m/periods :month))
-      (def triclojure-meetings (map (comp six-pm third-wednesday) months))
-      (doall (take 3 triclojure-meetings)))
-
-Note that ALL of the evaluation of monotony.configured functions has
-to occur in the with-config block, and that the monotony.core
-functions are lazy. Thusly, we use doall to realize the sequence in
-its entirety and return it.
 
 ## Acknowledgements
 

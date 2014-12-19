@@ -1,13 +1,18 @@
 (ns ^{:doc "Logical assertions and relations for reasoning about time."
       :author "Alex Redington"}
   monotony.logic
-  (:refer-clojure :exclude [==])
-  (:use [clojure.math.numeric-tower :only (abs)])
-  (:require [clojure.set :as s]
-            [clojure.core.logic :as l]
-            [clojure.core.logic.pldb :as pldb]
-            [clojure.core.logic.arithmetic :as la]
-            [monotony.time :as t]))
+  (:refer-clojure :exclude [== > >=])
+  #+clj (:require [clojure.set :as s]
+                  [clojure.core.logic :as l :refer [defne fresh conde project run run* ==]]
+                  [clojure.core.logic.pldb :as pldb]
+                  [clojure.core.logic.arithmetic :refer [> >=]]
+                  [monotony.time :as t]
+                  [clojure.math.numeric-tower :refer [abs]])
+  #+cljs (:require [clojure.set :as s]
+                   [cljs.core.logic :as l]
+                   [cljs.core.logic.pldb :as pldb :include-macros true]
+                    [monotony.time :as t])
+  #+cljs (:require-macros [cljs.core.logic.macros :as lm :refer [defne fresh conde project run run* ==]]))
 
 (pldb/db-rel cycle-keyword cycle)
 
@@ -16,6 +21,8 @@
 (pldb/db-rel contains-varying period-name number cycle)
 
 (pldb/db-rel period-named name named-cycle index containing-cycle)
+
+#+cljs (defn abs [n] (.abs js/Math n))
 
 (def time-db
   (pldb/db
@@ -102,13 +109,16 @@
    [period-named :10pm :hour 10 :day]
    [period-named :11pm :hour 11 :day]))
 
-(l/defne smallest-varianto [cycle named-period predicate]
+(defne
+  smallest-varianto [cycle named-period predicate]
   ([:month :february true] l/s#)
-  ([:month _ false] (l/fresh [index]
+  ([:month _ false] (fresh
+                      [index]
                       (l/!= named-period :february)
                       (period-named named-period cycle index :year)))
   ([:year :yearm3 false] l/s#)
-  ([:year _ true] (l/fresh [index]
+  ([:year _ true] (fresh
+                    [index]
                     (l/!= named-period :yearm3)
                     (period-named named-period cycle index :leap-year-cycle))))
 
@@ -117,59 +127,66 @@
 ;; (millis-ino :millisecond 1)
 ;; (millis-ino :second 1000)
 ;; (millis-ino :minute 60000)
-(l/defne millis-ino [cycle millis]
+(defne
+  millis-ino [cycle millis]
   ([:millisecond 1] l/s#)
-  ([_ _] (l/fresh [cycle2-count cycle2 cycle2-millis]
-                  (l/!= cycle :millisecond)
-                  (l/conde
-                   ((contains-tightly cycle cycle2-count cycle2))
-                   ((l/fresh [named-period]
-                             (smallest-varianto cycle named-period true)
-                             (contains-varying named-period cycle2-count cycle2))))
-                  (millis-ino cycle2 cycle2-millis)
-                  (l/project [cycle2-count cycle2-millis]
-                             (l/== millis (* cycle2-count cycle2-millis))))))
+  ([_ _] (fresh
+           [cycle2-count cycle2 cycle2-millis]
+           (l/!= cycle :millisecond)
+           (conde
+            ((contains-tightly cycle cycle2-count cycle2))
+            ((fresh
+               [named-period]
+               (smallest-varianto cycle named-period true)
+               (contains-varying named-period cycle2-count cycle2))))
+           (millis-ino cycle2 cycle2-millis)
+           (project
+            [cycle2-count cycle2-millis]
+            (== millis (* cycle2-count cycle2-millis))))))
 
-(l/defne containso [cycle1 cycle2 out]
-  ([_ _ true] (l/fresh [millis1 millis2]
-                       (millis-ino cycle1 millis1)
-                       (millis-ino cycle2 millis2)
-                       (la/> millis1 millis2)))
-  ([_ _ false] (l/fresh [millis1 millis2]
-                        (millis-ino cycle1 millis1)
-                        (millis-ino cycle2 millis2)
-                        (la/>= millis2 millis1))))
+(defne
+  containso [cycle1 cycle2 out]
+  ([_ _ true] (fresh
+                [millis1 millis2]
+                (millis-ino cycle1 millis1)
+                (millis-ino cycle2 millis2)
+                (> millis1 millis2)))
+  ([_ _ false] (fresh
+                 [millis1 millis2]
+                 (millis-ino cycle1 millis1)
+                 (millis-ino cycle2 millis2)
+                 (>= millis2 millis1))))
 
 (defn cycle-contains?
   "Compares cycle1 and cycle2 as cycle keywords (e.g. :year, :month),
   returns truthy if cycle1 is a larger cycle of time than cycle2"
   [cycle1 cycle2]
   (pldb/with-db time-db
-    (first (l/run 1 [q] (containso cycle1 cycle2 q)))))
+    (first (run 1 [q] (containso cycle1 cycle2 q)))))
 
 (defn cycles-in
-  "Returns a seq of all cycle keywords for cycles that are contained by
-  cycle"
+  "Returns a seq of all cycle keywords for cycles that are contained
+  by cycle"
   [cycle]
   (pldb/with-db time-db
-    (set (l/run* [q] (containso cycle q true)))))
-(alter-var-root #'cycles-in memoize)
+    (set (run* [q] (containso cycle q true)))))
+#+clj (alter-var-root #'cycles-in memoize)
 
 (defn cycles-not-in
   "Returns a seq of all cycle keywords for cycles that are not
   contained by cycle"
   [cycle]
   (pldb/with-db time-db
-    (set (l/run* [q] (containso cycle q false)))))
-(alter-var-root #'cycles-in memoize)
+    (set (run* [q] (containso cycle q false)))))
+#+clj (alter-var-root #'cycles-in memoize)
 
 (defn cycle-for
   "Returns the cycle keyword which generates a seq of periods such
   that each period will be named period-name"
   [period-name]
   (pldb/with-db time-db
-    (first (l/run 1 [q]
-             (l/fresh [cycle-size index]
+    (first (run 1 [q]
+             (fresh [cycle-size index]
                (period-named period-name cycle-size index q))))))
 
 (defn cycle-millis
@@ -177,18 +194,17 @@
   generated by a cycle keyword."
   [cycle]
   (pldb/with-db time-db
-    (first (l/run 1 [q] (millis-ino cycle q)))))
-(alter-var-root #'cycle-millis memoize)
+    (first (run 1 [q] (millis-ino cycle q)))))
+#+clj (alter-var-root #'cycle-millis memoize)
 
 (defn- cycle-errors
   [milliseconds]
   (pldb/with-db time-db
-    (l/run*
-      [q]
-      (l/fresh [cycle cycle-millis]
-        (millis-ino cycle cycle-millis)
-        (l/project [cycle-millis]
-                   (l/== q [cycle (- milliseconds cycle-millis)]))))))
+    (run* [q] (fresh
+                [cycle cycle-millis]
+                (millis-ino cycle cycle-millis)
+                (project [cycle-millis]
+                       (== q [cycle (- milliseconds cycle-millis)]))))))
 
 (defn approximate-cycle
   "Returns the cycle keyword which best fits the period passed in"

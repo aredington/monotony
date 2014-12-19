@@ -2,7 +2,6 @@
       :author "Alex Redington"}
   monotony.holidays
   (:require [monotony.time :as t]
-            [monotony.constants :as c]
             [monotony.core :as m]))
 
 (defn- yearly-days-for-month

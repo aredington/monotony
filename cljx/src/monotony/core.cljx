@@ -2,109 +2,57 @@
       :author "Alex Redington"}
   monotony.core
   (:require [monotony.time :as t]
-            [monotony.constants :as c]
+            [monotony.platform :as p]
             [monotony.logic :as l])
-  (:import java.util.Calendar
-           java.util.TimeZone
-           java.util.Locale))
+  #+clj (:import java.util.Calendar
+                 java.util.TimeZone
+                 java.util.Locale))
 
-(defn new-cal
-  "Return a new GMT Calendar instance."
-  []
-  (Calendar/getInstance (TimeZone/getTimeZone "GMT - 0") Locale/ROOT))
+;; platform native coupled code
 
-(defn local-cal
-  "Return a new local calendar instance."
+(defn system-millis
   []
-  (Calendar/getInstance))
+  #+clj (System/currentTimeMillis)
+  #+cljs (.now js/Date))
+
+;; end platform native code
+(defn local-config
+  "Returns a new configuration initialized to the system's present
+local time and locale."
+  ([] {:seed system-millis})
+  ([spec] (merge (local-config) spec)))
 
 (defn new-config
   "Return a new configuration initialized to Midnight, January 1 1970,
 and Calendars operating in GMT"
-  ([] {:calendar new-cal
+  ([] {:offset "GMT - 0"
        :seed (constantly 0)})
   ([spec] (merge (new-config) spec)))
-
-(defn local-config
-  "Returns a new configuration initialized to the system's present
-local time and locale."
-  ([] {:calendar local-cal
-       :seed (fn [] (System/currentTimeMillis))})
-  ([spec] (merge (local-config) spec)))
-
-(defn blank-cal
-  "Returns a calendar instance initialized to the UNIX epoch."
-  [{calendar :calendar}]
-  (let [^Calendar blank-cal (calendar)]
-    (.setTimeInMillis blank-cal 0)
-    blank-cal))
-
-(defn calendar
-  "Returns a calendar instance initialized to time"
-  [{calendar :calendar} time]
-  (let [^Calendar cal (calendar)]
-    (do
-      (.setTimeInMillis cal (t/millis time))
-      cal)))
-
-(defn period-named?
-  "Returns true if the period is the named period, false otherwise."
-  [config period name]
-  (let [[value field] (if-let [ret (c/named-periods (keyword name))]
-                        ret
-                        (throw (IllegalArgumentException.
-                                (str "Unknown period name: " name))))
-        ^Calendar start-cal (calendar config (t/start period))
-        ^Calendar end-cal (calendar config (t/end period))]
-    (and (= (.get start-cal field) value)
-         (= (.get end-cal field) value))))
-
-(defmulti ^:private instant-name (fn [cycle-constant cal] cycle-constant))
-
-(defmethod instant-name Calendar/HOUR_OF_DAY
-  [cycle-constant cal]
-  (case (.get cal cycle-constant)
-    0 :midnight
-    12 :noon
-    nil))
-
-(defmethod instant-name Calendar/DAY_OF_WEEK
-  [cycle-constant cal]
-  (-> cycle-constant
-      c/period-names
-      (get (.get cal cycle-constant))))
-
-(defmethod instant-name Calendar/MONTH
-  [cycle-constant cal]
-  (-> cycle-constant
-      c/period-names
-      (get (.get cal cycle-constant))))
-
-(defmethod instant-name Calendar/YEAR
-  [cycle-constant cal]
-  (.get cal cycle-constant))
 
 (defn period-name
   "Return the period name for a period when the period corresponds to
   a cycle length and is correctly bounded."
   [config period]
   (let [cycle (l/approximate-cycle period)
-        cycle-constant (c/cycles cycle)
-        ^Calendar start-cal (calendar config (t/start period))
-        ^Calendar end-cal (calendar config (t/end period))
-        start-name (instant-name cycle-constant start-cal)
-        end-name (instant-name cycle-constant end-cal)]
+        accessor (p/cycles cycle)
+        start-name (p/get-name accessor config (t/start period))
+        end-name (p/get-name accessor config (t/end period))]
     (when (= start-name end-name)
       start-name)))
+
+(defn period-named?
+  "Returns true if the period is the named period, false otherwise."
+  [config period name]
+  (when-not ((set (p/all-period-names)) (keyword name))
+    (throw (#+clj IllegalArgumentException. #+cljs js/Error. (str "Unknown period name: " name))))
+  (= (period-name config period) (keyword name)))
 
 (defn later
   "Return a time cycle later than seed."
   ([{seed :seed :as config} amount cycle]
      (later config amount cycle (seed)))
   ([config amount cycle seed]
-     (let [^Calendar cal (calendar config seed)]
-       (do (.add cal (cycle c/cycles) amount)
-           (.getTime cal)))))
+   (p/add-field (p/cycles cycle) config seed amount)))
 
 (defn prior-boundary
   "Returns the start of a bounded cycle including time seed.
@@ -113,16 +61,12 @@ local time and locale."
 
   will return 12:00:00AM of the present year."
   ([{seed :seed :as config} cycle]
-     (prior-boundary config (seed) cycle))
+   (prior-boundary config (seed) cycle))
   ([config seed cycle]
-     (let [^Calendar cal (calendar config seed)
-           cycle-fields (map c/cycles (l/cycles-not-in cycle))
-           reset-map (into {} (for [field cycle-fields]
-                                [field (.get cal field)]))]
-       (.clear cal)
-       (doseq [[field value] reset-map]
-         (.set cal field value))
-       (.getTime cal))))
+   (let [kept-cycle-accessors (map p/cycles (l/cycles-not-in cycle))
+         reset-map (into {} (for [accessor kept-cycle-accessors]
+                              [accessor (p/get-field accessor config seed)]))]
+     (p/create-date config reset-map))))
 
 (defn next-boundary
   "Returns the next clean boundary of a cycle after
@@ -264,7 +208,7 @@ local time and locale."
      (when-not (empty? seq)
        (if (counted? seq)
          (normalize config seq (l/min-cycle (map l/approximate-cycle seq)))
-         (throw (IllegalArgumentException.
+         (throw (#+clj IllegalArgumentException. #+cljs js/Error.
                  "Passed in seq is not counted. Must specify cycle with (normalize config seq cycle)"))))))
 
 (defn contiguous?
@@ -282,7 +226,7 @@ local time and locale."
   "Returns the cycle keywords for cycles which can start on the
   provided time, with the largest cycle first."
   [config time]
-  (let [periods-including-time (map #(period-including config time %) (keys c/cycles))
+  (let [periods-including-time (map #(period-including config time %) (keys p/cycles))
         valid-periods (filter #(= (t/start %) time) periods-including-time)
         sorted-periods (sort-by (fn [period]
                                   (- (t/millis (t/start period))

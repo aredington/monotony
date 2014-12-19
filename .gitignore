@@ -10,3 +10,5 @@ build
 /target/repl-port
 /target/stale/dependencies
 /target/stale/extract-native.dependencies
+/.nrepl-port
+/target/*
