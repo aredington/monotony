@@ -1,11 +1,10 @@
 (ns ^{:doc "Logical assertions and relations for reasoning about time."
       :author "Alex Redington"}
   monotony.logic
-  (:refer-clojure :exclude [== > >=])
+  (:refer-clojure :exclude [==])
   #+clj (:require [clojure.set :as s]
                   [clojure.core.logic :as l :refer [defne fresh conde project run run* ==]]
                   [clojure.core.logic.pldb :as pldb]
-                  [clojure.core.logic.arithmetic :refer [> >=]]
                   [monotony.time :as t]
                   [clojure.math.numeric-tower :refer [abs]])
   #+cljs (:require [clojure.set :as s]
@@ -114,13 +113,15 @@
   ([:month :february true] l/s#)
   ([:month _ false] (fresh
                       [index]
-                      (l/!= named-period :february)
-                      (period-named named-period cycle index :year)))
+                      (period-named named-period cycle index :year)
+                      (project [named-period]
+                               (== true (not= named-period :february)))))
   ([:year :yearm3 false] l/s#)
   ([:year _ true] (fresh
                     [index]
-                    (l/!= named-period :yearm3)
-                    (period-named named-period cycle index :leap-year-cycle))))
+                    (period-named named-period cycle index :leap-year-cycle)
+                    (project [named-period]
+                             (== true (not= named-period :yearm3))))))
 
 ;; millis-ino represents a relation between a keyword and the number
 ;; of millis contained therein, e.g.
@@ -132,7 +133,8 @@
   ([:millisecond 1] l/s#)
   ([_ _] (fresh
            [cycle2-count cycle2 cycle2-millis]
-           (l/!= cycle :millisecond)
+           (project [cycle]
+                    (== true (not= cycle :millisecond)))
            (conde
             ((contains-tightly cycle cycle2-count cycle2))
             ((fresh
@@ -150,12 +152,14 @@
                 [millis1 millis2]
                 (millis-ino cycle1 millis1)
                 (millis-ino cycle2 millis2)
-                (> millis1 millis2)))
+                (project [millis1 millis2]
+                         (== true (> millis1 millis2)))))
   ([_ _ false] (fresh
                  [millis1 millis2]
                  (millis-ino cycle1 millis1)
                  (millis-ino cycle2 millis2)
-                 (>= millis2 millis1))))
+                 (project [millis1 millis2]
+                          (== true (>= millis2 millis1))))))
 
 (defn cycle-contains?
   "Compares cycle1 and cycle2 as cycle keywords (e.g. :year, :month),
